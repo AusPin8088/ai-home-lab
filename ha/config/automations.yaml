@@ -32,19 +32,38 @@
            and ('overload' in trigger.topic or 'overheat' in trigger.topic)
            and trigger.payload == 'on' }}
   action:
+    - variables:
+        outlet: >-
+          {% if '_p304m_1_' in trigger.topic %}Plug 1
+          {% elif '_p304m_2_' in trigger.topic %}Plug 2
+          {% elif '_p304m_3_' in trigger.topic %}Plug 3
+          {% elif '_p304m_4_' in trigger.topic %}Plug 4
+          {% else %}Unknown plug{% endif %}
+        alert_type: >-
+          {% if 'overheated' in trigger.topic %}Overheat
+          {% elif 'overloaded' in trigger.topic %}Overload
+          {% else %}Safety alert{% endif %}
+        alert_message: >-
+          {{ outlet }} {{ alert_type }} detected (state={{ trigger.payload }}) at
+          {{ now().strftime('%Y-%m-%d %H:%M:%S') }}.
     - service: mqtt.publish
       data:
         topic: home/automation/p304m/safety_alert
         payload: >-
-          {"source_topic":"{{ trigger.topic }}","state":"{{ trigger.payload }}","time":"{{ now().isoformat() }}"}
+          {"outlet":"{{ outlet }}","alert_type":"{{ alert_type }}","source_topic":"{{ trigger.topic }}","state":"{{ trigger.payload }}","time":"{{ now().isoformat() }}"}
+    - service: rest_command.discord_safety_alert
+      continue_on_error: true
+      data:
+        message: >-
+          P304M safety alert | {{ alert_message }}
     - service: notify.notify
       continue_on_error: true
       data:
         title: "P304M safety alert"
-        message: "{{ trigger.topic }} changed to {{ trigger.payload }}."
+        message: "{{ alert_message }}"
     - service: persistent_notification.create
       data:
         title: "P304M safety alert"
-        message: "{{ trigger.topic }} changed to {{ trigger.payload }}."
+        message: "{{ alert_message }}"
         notification_id: p304m_safety_alert
   mode: single

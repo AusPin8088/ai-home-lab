@@ -20,6 +20,14 @@ mqtt_statestream:
     entity_globs:
       - switch.*p304m*
 
+rest_command:
+  discord_safety_alert:
+    url: !secret discord_webhook_url
+    method: POST
+    content_type: "application/json"
+    payload: >-
+      {{ {"content": message} | tojson }}
+
 automation: !include automations.yaml
 script: !include scripts.yaml
 scene: !include scenes.yaml
