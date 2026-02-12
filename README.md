@@ -28,6 +28,7 @@ Docker-based local automation stack:
 - `docs/architecture.md`: system architecture and runtime layout
 - `docs/runbook.md`: operations and troubleshooting
 - `docs/backup-restore.md`: backup and restore workflow
+- `docs/current-state-repro.md`: current state and exact reproducible commands
 - `runtime/`: container runtime/state volumes (gitignored)
 
 ## Start / Stop

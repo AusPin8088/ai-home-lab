@@ -97,7 +97,9 @@ try {
   if ($stoppedForBackup) {
     Push-Location $composeDir
     try {
-      docker compose start @services | Out-Host
+      # Use `up -d` so service definitions are reconciled after backup
+      # (safe when mounts/paths changed over time).
+      docker compose up -d | Out-Host
     } finally {
       Pop-Location
     }
