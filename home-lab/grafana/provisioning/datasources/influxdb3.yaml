@@ -1,0 +1,21 @@
+apiVersion: 1
+
+deleteDatasources:
+  - name: InfluxDB3
+    orgId: 1
+  - name: influxdb
+    orgId: 1
+
+datasources:
+  - name: influxdb
+    type: influxdb
+    access: proxy
+    url: http://influxdb:8181
+    isDefault: true
+    editable: true
+    jsonData:
+      version: SQL
+      dbName: ${INFLUXDB_DATABASE}
+      insecureGrpc: true
+    secureJsonData:
+      token: ${INFLUXDB_TOKEN}

@@ -1,0 +1,50 @@
+- id: "p304m_switch_audit_to_mqtt"
+  alias: "P304M switch audit to MQTT"
+  description: "Publish every P304M switch state change to a dedicated audit topic."
+  trigger:
+    - platform: mqtt
+      topic: home/ha/switch/+/state
+  condition:
+    - condition: template
+      value_template: "{{ 'p304m' in trigger.topic and trigger.payload in ['on', 'off'] }}"
+  action:
+    - service: mqtt.publish
+      data:
+        topic: home/automation/p304m/switch_event
+        payload: >-
+          {"source_topic":"{{ trigger.topic }}","state":"{{ trigger.payload }}","time":"{{ now().isoformat() }}"}
+    - service: logbook.log
+      data:
+        name: "P304M switch"
+        message: "{{ trigger.topic }} -> {{ trigger.payload }}"
+  mode: queued
+
+- id: "p304m_overheat_overload_alert"
+  alias: "P304M overload/overheat alert"
+  description: "Create safety alerts when P304M binary sensors report overload/overheat."
+  trigger:
+    - platform: mqtt
+      topic: home/ha/binary_sensor/+/state
+  condition:
+    - condition: template
+      value_template: >-
+        {{ 'p304m' in trigger.topic
+           and ('overload' in trigger.topic or 'overheat' in trigger.topic)
+           and trigger.payload == 'on' }}
+  action:
+    - service: mqtt.publish
+      data:
+        topic: home/automation/p304m/safety_alert
+        payload: >-
+          {"source_topic":"{{ trigger.topic }}","state":"{{ trigger.payload }}","time":"{{ now().isoformat() }}"}
+    - service: notify.notify
+      continue_on_error: true
+      data:
+        title: "P304M safety alert"
+        message: "{{ trigger.topic }} changed to {{ trigger.payload }}."
+    - service: persistent_notification.create
+      data:
+        title: "P304M safety alert"
+        message: "{{ trigger.topic }} changed to {{ trigger.payload }}."
+        notification_id: p304m_safety_alert
+  mode: single

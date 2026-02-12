@@ -1,0 +1,160 @@
+Yep. Here’s a **detailed, “do this next” guide** for your **current setup** + how to use **Codex in your IDE** to drive the project.
+
+I’m assuming you’re on **Windows 11 + VS Code + Docker Desktop**, and your repo is `home-lab/` with `docker/compose.yaml`, plus services like HA, Mosquitto, Node-RED, Grafana, Ollama, and your Python agent writing to InfluxDB 3 Core (8181).
+
+---
+
+## 1) Lock down your current stack first (stability)
+
+Right now you’re on `quay.io/influxdb/influxdb3-core:latest` and logs show a nightly. That’s unstable.
+
+### 1.1 Pin InfluxDB 3 to a fixed tag
+
+In `home-lab/docker/compose.yaml`, change the image from:
+
+* `quay.io/influxdb/influxdb3-core:latest`
+  to a **specific version tag** (stable). Don’t use `latest`. (This is a general best practice; your own summary already notes it.)
+
+### 1.2 Stop running InfluxDB with `--without-auth`
+
+Keeping DB unauthenticated is fine for a 10-min test. Not fine for a real lab.
+
+* Remove `--without-auth`
+* Add proper auth (token/user) and keep secrets in `.env`
+
+(InfluxDB 3 Core is SQL-first and not the same as Influx 1/2, so don’t follow random “8086 bucket” tutorials.)
+
+---
+
+## 2) What to do in Grafana (InfluxDB 3 is SQL-first)
+
+Because you’re on InfluxDB 3 Core, the Grafana datasource + queries will look different from Influx 1/2 guides.
+
+### Recommended approach (clean and scalable)
+
+* Keep letting your **agent** write curated tables like `mqtt_event`, `agent_suggestion` (you already have these).
+* Grafana reads from InfluxDB for charts.
+* Later, add Postgres for “brain memory” (approvals, metadata, embeddings) if you want.
+
+This keeps HA out of the DB-writing problem and avoids tutorial mismatch.
+
+---
+
+## 3) IDE setup: Codex in VS Code (the best path for you)
+
+There are two “Codex” tools you should use together:
+
+1. **Codex VS Code Extension** (in-editor agent) ([OpenAI Developers][1])
+2. **Codex CLI** (terminal agent inside your repo) ([OpenAI Developers][2])
+
+### 3.1 Install the VS Code extension
+
+Install **Codex – OpenAI’s coding agent** from the VS Code Marketplace (publisher OpenAI). ([Visual Studio Marketplace][3])
+
+After install:
+
+* Sign in / connect your plan (Plus/Pro/Business/Edu/Enterprise include Codex). ([OpenAI Developers][1])
+
+### 3.2 Give Codex the *right workspace*
+
+Open VS Code at the repo root:
+
+* `home-lab/` (not a subfolder)
+
+So it sees:
+
+* `docker/compose.yaml`
+* `.env`
+* `services/agent/…`
+* any scripts, docs, etc.
+
+### 3.3 Set up a “safe workflow” in Codex (important)
+
+In VS Code Codex, use this rule:
+
+* **Plan mode first** (ask it to propose steps)
+* Then **apply changes**
+* Then **run tests** (docker compose up, health checks, query checks)
+
+Codex is designed to read/edit/run code, but you still want it working like a disciplined teammate. ([OpenAI Developers][4])
+
+---
+
+## 4) Install and use Codex CLI (this is huge for your stack)
+
+Codex CLI is an agent that can operate inside a directory (read/change/run code). It’s open source and meant for terminal workflows. ([OpenAI Developers][2])
+
+### 4.1 Install Codex CLI
+
+Follow the official Codex CLI doc for install steps and auth. ([OpenAI Developers][2])
+
+### 4.2 Use it correctly in this repo
+
+Open terminal at:
+
+* `home-lab/`
+
+Then you can ask it to do things like:
+
+* “Pin InfluxDB image version and remove without-auth; update agent and grafana config accordingly.”
+* “Add an `.env.example` and move secrets out of compose.”
+* “Create a Grafana dashboard JSON for mqtt_event + agent_suggestion.”
+* “Add make targets: up/down/logs/health.”
+
+Codex CLI is explicitly built to work locally in the selected directory. ([OpenAI Developers][2])
+
+---
+
+## 5) What language to use (for your “brain” code)
+
+For your lab’s agent service:
+
+* **Python** is the fastest path (FastAPI + paho-mqtt + Influx client/SQL calls)
+* Keep it as a container (`services/agent`) so it migrates to any OS.
+
+You already have `services/agent/app.py`, so don’t rewrite—extend.
+
+---
+
+## 6) The exact “Codex tasks” you should run next (copy/paste)
+
+Use these as prompts to Codex (VS Code or CLI):
+
+1. **Stabilize Influx**
+
+> “Pin influxdb3-core image to a stable tag (not latest), remove --without-auth, add token-based auth using .env. Update agent and grafana to authenticate.”
+
+2. **Make a reproducible dev workflow**
+
+> “Add Makefile tasks: up, down, logs, ps, restart, healthcheck. Add README with exact commands and ports.”
+
+3. **Standardize schema**
+
+> “Create a schema doc for mqtt_event, agent_suggestion, and add agent_action_audit. Update agent to write consistent fields.”
+
+4. **Grafana dashboards**
+
+> “Create a Grafana dashboard JSON that shows: mqtt_event count by topic, last device state, suggestions timeline, and error rate.”
+
+---
+
+## 7) One warning (so you don’t get stuck)
+
+InfluxDB 3 Core ≠ InfluxDB 2 tutorials.
+So if you want “tutorial compatibility”, you’d revert to Influx 2.8.
+But since you’re building an intelligent lab, keeping v3 is fine—just **treat your agent as the ingestion layer**.
+
+---
+
+## Quick check: what IDE are you using now?
+
+If it’s **VS Code**, tell me:
+
+* Are you coding inside **Windows** or **WSL2**?
+
+Then I’ll give you the cleanest “Codex + Docker + repo” workflow (terminal commands, recommended settings, and a ready-to-use task list).
+
+[1]: https://developers.openai.com/codex/ide?utm_source=chatgpt.com "Codex IDE extension - developers.openai.com"
+[2]: https://developers.openai.com/codex/cli?utm_source=chatgpt.com "Codex CLI - developers.openai.com"
+[3]: https://marketplace.visualstudio.com/items?itemName=OpenAI.chatgpt&utm_source=chatgpt.com "Codex – OpenAI’s coding agent - Visual Studio Marketplace"
+[4]: https://developers.openai.com/codex?utm_source=chatgpt.com "Codex - developers.openai.com"

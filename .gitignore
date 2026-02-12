@@ -1,0 +1,33 @@
+﻿.env
+*.env
+**/.env
+**/*.env
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Python and editor artifacts
+.pytest_cache/
+.mypy_cache/
+.DS_Store
+Thumbs.db
+
+# Docker/service runtime state (do not commit)
+home-lab/ollama/data/
+home-lab/grafana/data/
+home-lab/influxdb3/data/
+home-lab/influxdb3/secrets/admin-token.json
+home-lab/mosquitto/data/
+home-lab/mosquitto/log/
+home-lab/nodered/data/
+home-lab/home-lab/
+
+# Home Assistant runtime files
+home-lab/ha/config/.storage/
+home-lab/ha/config/.cloud/
+home-lab/ha/config/.ha_run.lock
+home-lab/ha/config/home-assistant.log*
+home-lab/ha/config/home-assistant_v2.db*
+home-lab/ha/config/secrets.yaml
+home-lab/mosquitto/config/passwordfile
