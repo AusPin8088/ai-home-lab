@@ -21,8 +21,8 @@
       - "1883:1883"
     volumes:
       - ../mosquitto/config:/mosquitto/config
-      - ../mosquitto/data:/mosquitto/data
-      - ../mosquitto/log:/mosquitto/log
+      - ../runtime/mosquitto/data:/mosquitto/data
+      - ../runtime/mosquitto/log:/mosquitto/log
 
   nodered:
     image: nodered/node-red@sha256:7dfe40efdd7b9f21916f083802bfe60a762bc020969d95553ffa020c97a72eb9
@@ -33,7 +33,7 @@
     environment:
       - TZ=${TZ}
     volumes:
-      - ../nodered/data:/data
+      - ../runtime/nodered/data:/data
     depends_on:
       - mosquitto
 
@@ -52,8 +52,8 @@
       - --data-dir=/var/lib/influxdb3
       - --admin-token-file=/run/secrets/admin-token.json
     volumes:
-      - ../influxdb3/data:/var/lib/influxdb3
-      - ../influxdb3/secrets/admin-token.json:/run/secrets/admin-token.json:ro
+      - ../runtime/influxdb3/data:/var/lib/influxdb3
+      - ../runtime/influxdb3/secrets/admin-token.json:/run/secrets/admin-token.json:ro
 
   influxdb-init:
     image: quay.io/influxdb/influxdb3-core@sha256:ad4ad468af9b2fbbe92523a5764217916cd1bdd43f578aef504da133ff3f0d0b
@@ -82,7 +82,7 @@
       - INFLUXDB_DATABASE=${INFLUXDB_DATABASE}
       - INFLUXDB_TOKEN=${INFLUXDB_TOKEN}
     volumes:
-      - ../grafana/data:/var/lib/grafana
+      - ../runtime/grafana/data:/var/lib/grafana
       - ../grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
     depends_on:
       influxdb:
@@ -99,7 +99,7 @@
     environment:
       - TZ=${TZ}
     volumes:
-      - ../ollama/data:/root/.ollama
+      - ../runtime/ollama/data:/root/.ollama
 
   agent:
     build:

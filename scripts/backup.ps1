@@ -60,18 +60,19 @@ try {
 
   Copy-Tree -Source (Join-Path $repoRoot "ha\config") -Destination (Join-Path $targetDir "ha\config")
   Copy-Tree -Source (Join-Path $repoRoot "mosquitto\config") -Destination (Join-Path $targetDir "mosquitto\config")
-  Copy-Tree -Source (Join-Path $repoRoot "mosquitto\data") -Destination (Join-Path $targetDir "mosquitto\data")
-  Copy-Tree -Source (Join-Path $repoRoot "nodered\data") -Destination (Join-Path $targetDir "nodered\data")
-  Copy-Tree -Source (Join-Path $repoRoot "grafana\data") -Destination (Join-Path $targetDir "grafana\data")
-  Copy-Tree -Source (Join-Path $repoRoot "influxdb3\data") -Destination (Join-Path $targetDir "influxdb3\data")
-  Copy-Tree -Source (Join-Path $repoRoot "influxdb3\secrets") -Destination (Join-Path $targetDir "influxdb3\secrets")
+  Copy-Tree -Source (Join-Path $repoRoot "runtime\mosquitto\data") -Destination (Join-Path $targetDir "runtime\mosquitto\data")
+  Copy-Tree -Source (Join-Path $repoRoot "runtime\mosquitto\log") -Destination (Join-Path $targetDir "runtime\mosquitto\log")
+  Copy-Tree -Source (Join-Path $repoRoot "runtime\nodered\data") -Destination (Join-Path $targetDir "runtime\nodered\data")
+  Copy-Tree -Source (Join-Path $repoRoot "runtime\grafana\data") -Destination (Join-Path $targetDir "runtime\grafana\data")
+  Copy-Tree -Source (Join-Path $repoRoot "runtime\influxdb3\data") -Destination (Join-Path $targetDir "runtime\influxdb3\data")
+  Copy-Tree -Source (Join-Path $repoRoot "runtime\influxdb3\secrets") -Destination (Join-Path $targetDir "runtime\influxdb3\secrets")
   if ($IncludeOllama) {
-    Copy-Tree -Source (Join-Path $repoRoot "ollama\data") -Destination (Join-Path $targetDir "ollama\data")
+    Copy-Tree -Source (Join-Path $repoRoot "runtime\ollama\data") -Destination (Join-Path $targetDir "runtime\ollama\data")
   }
 
   Copy-Item -Path (Join-Path $repoRoot "docker\.env") -Destination (Join-Path $targetDir "docker.env") -Force
   Copy-Item -Path (Join-Path $repoRoot "docker\compose.yaml") -Destination (Join-Path $targetDir "compose.yaml") -Force
-  Copy-Item -Path (Join-Path $repoRoot "docs\runtime-lock.md") -Destination (Join-Path $targetDir "runtime-lock.md") -Force
+  Copy-Item -Path (Join-Path $repoRoot "docs\runbook.md") -Destination (Join-Path $targetDir "runbook.md") -Force
 
   $manifest = @{
     created_at = (Get-Date).ToString("o")
