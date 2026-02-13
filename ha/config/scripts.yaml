@@ -1,0 +1,35 @@
+ai_send_plug_command:
+  alias: AI Send Plug Command
+  description: Publish a guarded plug command to the AI bridge command topic.
+  mode: queued
+  fields:
+    plug:
+      name: Plug Number
+      description: Plug index (1-4)
+      required: true
+      example: 2
+      selector:
+        number:
+          min: 1
+          max: 4
+          step: 1
+          mode: box
+    state:
+      name: State
+      description: Target switch state
+      required: true
+      example: "on"
+      selector:
+        select:
+          options:
+            - "on"
+            - "off"
+  sequence:
+    - variables:
+        cmd: >-
+          turn {{ state | lower }} plug {{ plug }}
+    - service: mqtt.publish
+      data:
+        topic: home/ai/command
+        payload: >-
+          {{ {"command": cmd, "source": "manual", "confirm": true} | tojson }}

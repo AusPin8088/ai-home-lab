@@ -1,0 +1,103 @@
+title: AI Control
+views:
+  - title: Control
+    path: control
+    icon: mdi:robot
+    cards:
+      - type: entities
+        title: AI Assistant Mode
+        show_header_toggle: false
+        entities:
+          - entity: input_select.ai_action_mode
+            name: Autonomy Mode
+
+      - type: markdown
+        title: Ask Mode Notes
+        content: |
+          In `ask` mode, commands require confirmation.
+          These buttons send confirmed commands through the guarded bridge.
+
+      - type: grid
+        title: Plug Controls
+        columns: 2
+        square: false
+        cards:
+          - type: button
+            name: Plug 1 ON
+            icon: mdi:power-plug
+            tap_action:
+              action: call-service
+              service: script.ai_send_plug_command
+              data:
+                plug: 1
+                state: "on"
+          - type: button
+            name: Plug 1 OFF
+            icon: mdi:power-plug-off
+            tap_action:
+              action: call-service
+              service: script.ai_send_plug_command
+              data:
+                plug: 1
+                state: "off"
+          - type: button
+            name: Plug 2 ON
+            icon: mdi:power-plug
+            tap_action:
+              action: call-service
+              service: script.ai_send_plug_command
+              data:
+                plug: 2
+                state: "on"
+          - type: button
+            name: Plug 2 OFF
+            icon: mdi:power-plug-off
+            tap_action:
+              action: call-service
+              service: script.ai_send_plug_command
+              data:
+                plug: 2
+                state: "off"
+          - type: button
+            name: Plug 3 ON
+            icon: mdi:power-plug
+            tap_action:
+              action: call-service
+              service: script.ai_send_plug_command
+              data:
+                plug: 3
+                state: "on"
+          - type: button
+            name: Plug 3 OFF
+            icon: mdi:power-plug-off
+            tap_action:
+              action: call-service
+              service: script.ai_send_plug_command
+              data:
+                plug: 3
+                state: "off"
+          - type: button
+            name: Plug 4 ON
+            icon: mdi:power-plug
+            tap_action:
+              action: call-service
+              service: script.ai_send_plug_command
+              data:
+                plug: 4
+                state: "on"
+          - type: button
+            name: Plug 4 OFF
+            icon: mdi:power-plug-off
+            tap_action:
+              action: call-service
+              service: script.ai_send_plug_command
+              data:
+                plug: 4
+                state: "off"
+
+      - type: button
+        name: Open Node-RED AI Console
+        icon: mdi:open-in-new
+        tap_action:
+          action: url
+          url_path: http://localhost:1880/ai-console

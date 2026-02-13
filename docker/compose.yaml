@@ -83,7 +83,8 @@
       - INFLUXDB_TOKEN=${INFLUXDB_TOKEN}
     volumes:
       - ../runtime/grafana/data:/var/lib/grafana
-      - ../grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ../grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../grafana/dashboards:/var/lib/grafana/dashboards:ro
     depends_on:
       influxdb:
         condition: service_started
@@ -113,19 +114,25 @@
       - MQTT_USER=${MQTT_USER}
       - MQTT_PASSWORD=${MQTT_PASSWORD}
       - OLLAMA_URL=http://ollama:11434
-      - SUGGESTION_HTTP_TIMEOUT=120
-      - ACTION_BRIDGE_ENABLED=true
-      - ACTION_PARSE_WITH_OLLAMA=true
-      - ACTION_COMMAND_TOPIC=home/ai/command
-      - ACTION_RESULT_TOPIC=home/ai/action_result
-      - ACTION_HTTP_TIMEOUT=20
-      - ACTION_PARSE_TIMEOUT=60
+      - SUGGESTION_HTTP_TIMEOUT=${SUGGESTION_HTTP_TIMEOUT:-120}
+      - ACTION_BRIDGE_ENABLED=${ACTION_BRIDGE_ENABLED:-true}
+      - ACTION_PARSE_WITH_OLLAMA=${ACTION_PARSE_WITH_OLLAMA:-true}
+      - ACTION_COMMAND_TOPIC=${ACTION_COMMAND_TOPIC:-home/ai/command}
+      - ACTION_RESULT_TOPIC=${ACTION_RESULT_TOPIC:-home/ai/action_result}
+      - ACTION_MODE_TOPIC=${ACTION_MODE_TOPIC:-home/ai/mode}
+      - ACTION_MODE_SET_TOPIC=${ACTION_MODE_SET_TOPIC:-home/ai/mode/set}
+      - ACTION_MODE_DEFAULT=${ACTION_MODE_DEFAULT:-auto}
+      - ACTION_RATE_LIMIT_SECONDS=${ACTION_RATE_LIMIT_SECONDS:-2}
+      - ACTION_FLIP_COOLDOWN_SECONDS=${ACTION_FLIP_COOLDOWN_SECONDS:-3}
+      - ACTION_HTTP_TIMEOUT=${ACTION_HTTP_TIMEOUT:-20}
+      - ACTION_PARSE_TIMEOUT=${ACTION_PARSE_TIMEOUT:-60}
       - HA_URL=http://homeassistant:8123
       - HA_TOKEN=${HA_TOKEN}
       - ACTION_ENTITY_PLUG_1=switch.p304m_tapo_p304m_1
       - ACTION_ENTITY_PLUG_2=switch.p304m_tapo_p304m_2
       - ACTION_ENTITY_PLUG_3=switch.p304m_tapo_p304m_3
       - ACTION_ENTITY_PLUG_4=switch.p304m_tapo_p304m_4
+      - ACTION_EXTRA_ENTITY_MAP_JSON=${ACTION_EXTRA_ENTITY_MAP_JSON:-}
       - INFLUX_URL=http://influxdb:8181
       - INFLUX_TOKEN=${INFLUXDB_TOKEN}
       - INFLUX_ORG=${INFLUXDB_ORG}

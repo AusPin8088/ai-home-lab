@@ -68,12 +68,22 @@ Behavior:
 - writes MQTT events to Influx table `mqtt_event`
 - generates suggestion rows in `agent_suggestion`
 - suggestion generation is async (queue + worker), so ingestion stays stable
+- guarded action bridge:
+  - command topic `home/ai/command`
+  - result topic `home/ai/action_result`
+  - mode topic `home/ai/mode`, set topic `home/ai/mode/set`
+  - audit table `iox.agent_action` with source/mode/status tags
+  - supports multi-step commands in one sentence (for example: `turn on plug 3 and 4 and turn off plug 2`)
+  - guardrails: allowlist, rate limit, flip cooldown (default mode is `auto`; `ask` remains available)
 
 ### Operations scripts
 
 - `scripts/dev.ps1`: `up`, `down`, `ps`, `logs`, `restart`, `health`, `backup`, `smoke`
 - `scripts/backup.ps1`: backup workflow (cold backup by default)
 - `scripts/smoke.ps1`: end-to-end validation (can inject test events)
+- `scripts/ai-smoke.ps1`: AI action/mode/guardrail validation
+- `scripts/voice-bridge.ps1`: local voice/typed command bridge
+- `scripts/uptime-check.ps1`: endpoint uptime checks
 
 ## 3) Daily operations (exact commands)
 

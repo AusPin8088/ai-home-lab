@@ -1,0 +1,173 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": "influxdb",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "datasource": "influxdb",
+          "format": "time_series",
+          "query": "SELECT\n  DATE_BIN(INTERVAL '1 minute', time, TIMESTAMP '1970-01-01 00:00:00') AS time,\n  status AS metric,\n  CAST(COUNT(*) AS DOUBLE) AS value\nFROM iox.agent_action\nWHERE $__timeFilter(time)\nGROUP BY 1, 2\nORDER BY 1",
+          "refId": "A"
+        }
+      ],
+      "title": "Action Outcomes Over Time",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "influxdb",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 9
+      },
+      "id": 2,
+      "options": {
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": "influxdb",
+          "format": "table",
+          "query": "SELECT\n  time,\n  source,\n  mode,\n  status,\n  action,\n  entity_id,\n  command,\n  detail\nFROM iox.agent_action\nWHERE $__timeFilter(time)\nORDER BY time DESC\nLIMIT 100",
+          "refId": "A"
+        }
+      ],
+      "title": "Latest Agent Actions",
+      "type": "table"
+    },
+    {
+      "datasource": "influxdb",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 18
+      },
+      "id": 3,
+      "options": {
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": "influxdb",
+          "format": "table",
+          "query": "SELECT mode\nFROM iox.agent_action\nWHERE action = 'set_mode'\nORDER BY time DESC\nLIMIT 1",
+          "refId": "A"
+        }
+      ],
+      "title": "Current Mode",
+      "type": "stat"
+    },
+    {
+      "datasource": "influxdb",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 18
+      },
+      "id": 4,
+      "options": {
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": "influxdb",
+          "format": "table",
+          "query": "SELECT\n  time,\n  payload\nFROM mqtt_event\nWHERE topic = 'home/ai/action_result'\n  AND $__timeFilter(time)\nORDER BY time DESC\nLIMIT 30",
+          "refId": "A"
+        }
+      ],
+      "title": "Recent Action Result Payloads",
+      "type": "table"
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": [
+    "ai",
+    "guardrails",
+    "actions"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "AI Action Guardrails",
+  "uid": "ai-action-guardrails",
+  "version": 1,
+  "weekStart": ""
+}

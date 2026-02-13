@@ -28,6 +28,27 @@ rest_command:
     payload: >-
       {{ {"content": message} | tojson }}
 
+input_select:
+  ai_action_mode:
+    name: AI Action Mode
+    icon: mdi:robot
+    options:
+      - suggest
+      - ask
+      - auto
+    initial: ask
+
+lovelace:
+  mode: storage
+  dashboards:
+    ai-control:
+      mode: yaml
+      title: AI Control
+      icon: mdi:robot
+      show_in_sidebar: true
+      require_admin: false
+      filename: lovelace/ai-control.yaml
+
 automation: !include automations.yaml
 script: !include scripts.yaml
 scene: !include scenes.yaml

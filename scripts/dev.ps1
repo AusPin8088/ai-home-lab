@@ -1,6 +1,6 @@
 param(
   [Parameter(Mandatory = $true, Position = 0)]
-  [ValidateSet("up", "down", "ps", "logs", "restart", "health", "backup", "smoke")]
+  [ValidateSet("up", "down", "ps", "logs", "restart", "health", "backup", "smoke", "ai-smoke", "uptime")]
   [string]$Command,
 
   [Parameter(Position = 1)]
@@ -87,6 +87,16 @@ try {
     "smoke" {
       $smokeScript = Join-Path $PSScriptRoot "smoke.ps1"
       powershell -NoProfile -ExecutionPolicy Bypass -File $smokeScript -InjectTests
+      break
+    }
+    "ai-smoke" {
+      $aiSmokeScript = Join-Path $PSScriptRoot "ai-smoke.ps1"
+      powershell -NoProfile -ExecutionPolicy Bypass -File $aiSmokeScript
+      break
+    }
+    "uptime" {
+      $uptimeScript = Join-Path $PSScriptRoot "uptime-check.ps1"
+      powershell -NoProfile -ExecutionPolicy Bypass -File $uptimeScript
       break
     }
   }

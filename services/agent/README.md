@@ -37,6 +37,19 @@ Result topic:
 
 - `home/ai/action_result`
 
+Mode topics:
+
+- current mode: `home/ai/mode`
+- set mode: `home/ai/mode/set`
+
+Guardrails:
+
+- strict allowlist for entity IDs mapped from outlet numbers
+- global rate limit (`ACTION_RATE_LIMIT_SECONDS`, default `2`)
+- per-outlet flip cooldown (`ACTION_FLIP_COOLDOWN_SECONDS`, default `3`)
+- ask-mode confirmation required unless command contains `confirm` or JSON `confirm:true`
+- source tagging from payload (`manual|node_red|voice|api`)
+
 ## Packaging Note
 
 This service still uses `requirements.txt`. A future cleanup can replace it with `pyproject.toml`.

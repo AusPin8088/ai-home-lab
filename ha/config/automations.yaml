@@ -67,3 +67,39 @@
         message: "{{ alert_message }}"
         notification_id: p304m_safety_alert
   mode: single
+
+- id: "ai_mode_publish_from_helper"
+  alias: "AI mode publish from helper"
+  description: "Publish selected AI mode from HA helper to MQTT mode set topic."
+  trigger:
+    - platform: state
+      entity_id: input_select.ai_action_mode
+  action:
+    - service: mqtt.publish
+      data:
+        topic: home/ai/mode/set
+        payload: "{{ trigger.to_state.state | lower }}"
+  mode: queued
+
+- id: "ai_mode_sync_to_helper"
+  alias: "AI mode sync to helper"
+  description: "Sync helper when agent publishes current mode."
+  trigger:
+    - platform: mqtt
+      topic: home/ai/mode
+  condition:
+    - condition: template
+      value_template: >-
+        {{ trigger.payload_json is defined
+           and trigger.payload_json.mode is defined
+           and trigger.payload_json.mode in ['suggest', 'ask', 'auto'] }}
+    - condition: template
+      value_template: >-
+        {{ states('input_select.ai_action_mode') != trigger.payload_json.mode }}
+  action:
+    - service: input_select.select_option
+      target:
+        entity_id: input_select.ai_action_mode
+      data:
+        option: "{{ trigger.payload_json.mode }}"
+  mode: queued

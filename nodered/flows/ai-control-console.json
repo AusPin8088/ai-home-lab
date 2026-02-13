@@ -1,0 +1,498 @@
+[
+  {
+    "id": "b7c6b2ee8f4047c1",
+    "type": "tab",
+    "label": "AI Control Console",
+    "disabled": false,
+    "info": "AI command + result console without extra dashboard plugins"
+  },
+  {
+    "id": "f14d2a1c9e2a45cf",
+    "type": "mqtt-broker",
+    "name": "Mosquitto",
+    "broker": "mosquitto",
+    "port": "1883",
+    "clientid": "",
+    "autoConnect": true,
+    "usetls": false,
+    "protocolVersion": "4",
+    "keepalive": "60",
+    "cleansession": true,
+    "autoUnsubscribe": true,
+    "birthTopic": "",
+    "birthQos": "0",
+    "birthRetain": "false",
+    "birthPayload": "",
+    "closeTopic": "",
+    "closeQos": "0",
+    "closeRetain": "false",
+    "closePayload": "",
+    "willTopic": "",
+    "willQos": "0",
+    "willRetain": "false",
+    "willPayload": "",
+    "userProps": "",
+    "sessionExpiry": ""
+  },
+  {
+    "id": "b6f1a50ab9324f09",
+    "type": "http in",
+    "z": "b7c6b2ee8f4047c1",
+    "name": "GET /ai-console",
+    "url": "/ai-console",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 150,
+    "y": 100,
+    "wires": [
+      [
+        "8e2ef09cb4ea4c95"
+      ]
+    ]
+  },
+  {
+    "id": "8e2ef09cb4ea4c95",
+    "type": "template",
+    "z": "b7c6b2ee8f4047c1",
+    "name": "AI Console HTML",
+    "field": "payload",
+    "fieldType": "msg",
+    "format": "html",
+    "syntax": "mustache",
+    "template": "<!doctype html>\n<html>\n<head>\n  <meta charset=\"utf-8\" />\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />\n  <title>AI Home Console</title>\n  <style>\n    :root {\n      --bg: #0f172a;\n      --card: #111827;\n      --text: #e5e7eb;\n      --muted: #94a3b8;\n      --accent: #22c55e;\n      --warn: #f59e0b;\n      --bad: #ef4444;\n    }\n    body { margin: 0; font-family: \"Segoe UI\", Tahoma, sans-serif; background: radial-gradient(circle at 20% 10%, #1e293b, var(--bg)); color: var(--text); }\n    .wrap { max-width: 980px; margin: 24px auto; padding: 0 16px; }\n    .card { background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01)); border: 1px solid rgba(148,163,184,0.25); border-radius: 14px; padding: 16px; margin-bottom: 14px; }\n    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }\n    .avatar { width: 74px; height: 74px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, #60a5fa, #2563eb); display: grid; place-items: center; box-shadow: 0 0 25px rgba(96,165,250,.45); font-size: 28px; }\n    .badge { padding: 4px 10px; border-radius: 999px; background: rgba(148,163,184,.2); color: var(--muted); font-size: 12px; }\n    .badge.mode-auto { color: #16a34a; border: 1px solid #16a34a; }\n    .badge.mode-ask { color: #f59e0b; border: 1px solid #f59e0b; }\n    .badge.mode-suggest { color: #38bdf8; border: 1px solid #38bdf8; }\n    input, select, button { border-radius: 10px; border: 1px solid rgba(148,163,184,.35); background: #0b1220; color: var(--text); padding: 10px 12px; }\n    input { min-width: 280px; flex: 1; }\n    button { cursor: pointer; }\n    button.primary { background: #1d4ed8; }\n    button:disabled { opacity: 0.55; cursor: not-allowed; }\n    button.quick { min-width: 88px; }\n    .status-ok { color: var(--accent); }\n    .status-bad { color: var(--bad); }\n    .status-warn { color: var(--warn); }\n    .hint { color: var(--muted); font-size: 12px; min-height: 18px; }\n    .mono { font-family: Consolas, monospace; font-size: 12px; white-space: pre-wrap; }\n  </style>\n</head>\n<body>\n  <div class=\"wrap\">\n    <div class=\"card row\">\n      <div class=\"avatar\">^_^</div>\n      <div>\n        <h2 style=\"margin:0 0 8px 0\">AI Home Control</h2>\n        <div id=\"modeBadge\" class=\"badge mode-auto\">Mode: auto</div>\n      </div>\n    </div>\n\n    <div class=\"card\">\n      <div class=\"row\">\n        <input id=\"cmd\" placeholder=\"Try: turn off plug 2\" />\n        <button id=\"sendBtn\" class=\"primary\" onclick=\"sendCommand()\">Send</button>\n      </div>\n      <div id=\"submitStatus\" class=\"hint\"></div>\n      <p style=\"color:var(--muted)\">Commands run immediately for allowed devices (Plug 1-4).</p>\n    </div>\n\n    <div class=\"card\">\n      <h3 style=\"margin-top:0\">Quick Buttons</h3>\n      <div class=\"row\" id=\"quick\"></div>\n    </div>\n\n    <div class=\"card row\">\n      <label for=\"mode\">Autonomy mode</label>\n      <select id=\"mode\">\n        <option value=\"suggest\">suggest</option>\n        <option value=\"ask\">ask</option>\n        <option value=\"auto\" selected>auto</option>\n      </select>\n      <button onclick=\"setMode()\">Set Mode</button>\n    </div>\n\n    <div class=\"card\">\n      <h3 style=\"margin-top:0\">Last Result</h3>\n      <div id=\"lastStatus\" class=\"mono\">No result yet</div>\n    </div>\n  </div>\n\n<script>\nlet isSending = false;\nlet lockUntil = 0;\nlet lastQueuedCommand = '';\nlet lastQueuedAt = 0;\n\nfunction nowMs() { return Date.now(); }\n\nfunction setSubmitStatus(text, level = 'info') {\n  const el = document.getElementById('submitStatus');\n  el.textContent = text || '';\n  el.className = `hint ${level === 'ok' ? 'status-ok' : level === 'warn' ? 'status-warn' : level === 'bad' ? 'status-bad' : ''}`;\n}\n\nfunction setControlsDisabled(disabled) {\n  const sendBtn = document.getElementById('sendBtn');\n  const cmd = document.getElementById('cmd');\n  if (sendBtn) sendBtn.disabled = disabled;\n  if (cmd) cmd.disabled = disabled;\n  document.querySelectorAll('#quick button').forEach((btn) => { btn.disabled = disabled; });\n}\n\nfunction enforceLock() {\n  const shouldLock = isSending || nowMs() < lockUntil;\n  setControlsDisabled(shouldLock);\n}\n\nconst quick = document.getElementById('quick');\nfor (let i = 1; i <= 4; i++) {\n  const on = document.createElement('button');\n  on.className = 'quick';\n  on.textContent = `Plug ${i} ON`;\n  on.onclick = () => postCommand(`turn on plug ${i}`, true);\n  quick.appendChild(on);\n\n  const off = document.createElement('button');\n  off.className = 'quick';\n  off.textContent = `Plug ${i} OFF`;\n  off.onclick = () => postCommand(`turn off plug ${i}`, true);\n  quick.appendChild(off);\n}\n\nasync function postCommand(command, confirm) {\n  if (!command || isSending || nowMs() < lockUntil) {\n    return;\n  }\n\n  isSending = true;\n  enforceLock();\n  setSubmitStatus('Sending command...', 'info');\n  try {\n    const res = await fetch('/ai-command', {\n      method: 'POST',\n      headers: { 'Content-Type': 'application/json' },\n      body: JSON.stringify({ command, confirm: !!confirm, source: 'node_red' })\n    });\n    const body = await res.json();\n    console.log('queued', body);\n    lastQueuedCommand = command;\n    lastQueuedAt = nowMs();\n    lockUntil = nowMs() + 2200;\n    setSubmitStatus(`Queued: ${command}`, 'ok');\n  } catch (err) {\n    setSubmitStatus(`Send failed: ${err}`, 'bad');\n  } finally {\n    isSending = false;\n    enforceLock();\n  }\n}\n\nfunction sendCommand() {\n  const command = document.getElementById('cmd').value.trim();\n  const confirm = true;\n  if (!command) return;\n  postCommand(command, confirm);\n}\n\nasync function setMode() {\n  const mode = document.getElementById('mode').value;\n  await fetch('/ai-mode', {\n    method: 'POST',\n    headers: { 'Content-Type': 'application/json' },\n    body: JSON.stringify({ mode })\n  });\n}\n\nasync function refreshState() {\n  const resultRes = await fetch('/ai-result');\n  const result = await resultRes.json();\n\n  const modeRes = await fetch('/ai-mode');\n  const modeData = await modeRes.json();\n\n  const badge = document.getElementById('modeBadge');\n  badge.textContent = `Mode: ${modeData.mode || 'auto'}`;\n  badge.className = `badge mode-${modeData.mode || 'auto'}`;\n\n  const statusEl = document.getElementById('lastStatus');\n  statusEl.textContent = JSON.stringify(result, null, 2);\n  if (result.status === 'executed') statusEl.className = 'mono status-ok';\n  else if (result.status === 'failed') statusEl.className = 'mono status-bad';\n  else if (result.status === 'rejected') statusEl.className = 'mono status-warn';\n  else statusEl.className = 'mono';\n\n  if (lastQueuedCommand && result.command === lastQueuedCommand) {\n    if (result.status === 'executed') setSubmitStatus(`Done: ${lastQueuedCommand}`, 'ok');\n    else if (result.status === 'rejected') setSubmitStatus(`Rejected: ${result.detail || lastQueuedCommand}`, 'warn');\n    else if (result.status === 'failed') setSubmitStatus(`Failed: ${result.detail || lastQueuedCommand}`, 'bad');\n  }\n  enforceLock();\n}\n\nsetInterval(refreshState, 2000);\nrefreshState();\n</script>\n</body>\n</html>\n\n",
+    "output": "str",
+    "x": 350,
+    "y": 100,
+    "wires": [
+      [
+        "db86352fa72144b8"
+      ]
+    ]
+  },
+  {
+    "id": "db86352fa72144b8",
+    "type": "http response",
+    "z": "b7c6b2ee8f4047c1",
+    "name": "",
+    "statusCode": "",
+    "headers": {},
+    "x": 550,
+    "y": 100,
+    "wires": []
+  },
+  {
+    "id": "d8d027c0e6f740c8",
+    "type": "http in",
+    "z": "b7c6b2ee8f4047c1",
+    "name": "POST /ai-command",
+    "url": "/ai-command",
+    "method": "post",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 150,
+    "y": 180,
+    "wires": [
+      [
+        "9f3e7f8f8e4343f8"
+      ]
+    ]
+  },
+  {
+    "id": "9f3e7f8f8e4343f8",
+    "type": "json",
+    "z": "b7c6b2ee8f4047c1",
+    "name": "parse body",
+    "property": "payload",
+    "action": "obj",
+    "pretty": false,
+    "x": 340,
+    "y": 180,
+    "wires": [
+      [
+        "bb2f92e6d96e4e85"
+      ]
+    ]
+  },
+  {
+    "id": "bb2f92e6d96e4e85",
+    "type": "function",
+    "z": "b7c6b2ee8f4047c1",
+    "name": "build command + ack",
+    "func": "const body = msg.payload || {};\nconst command = String(body.command || '').trim();\nconst source = String(body.source || 'node_red').trim() || 'node_red';\nconst confirm = !!body.confirm;\nif (!command) {\n    const bad = {\n        payload: { ok: false, error: 'command required' },\n        statusCode: 400,\n        req: msg.req,\n        res: msg.res\n    };\n    return [null, bad];\n}\nconst cmd = {\n    command,\n    source,\n    confirm\n};\nconst toMqtt = {\n    topic: 'home/ai/command',\n    payload: JSON.stringify(cmd)\n};\nconst ack = {\n    payload: {\n        ok: true,\n        queued: true,\n        command,\n        source,\n        confirm\n    },\n    req: msg.req,\n    res: msg.res\n};\nreturn [toMqtt, ack];",
+    "outputs": 2,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 550,
+    "y": 180,
+    "wires": [
+      [
+        "a0264b025f154269"
+      ],
+      [
+        "f4ddb95ff28f45fb"
+      ]
+    ]
+  },
+  {
+    "id": "a0264b025f154269",
+    "type": "mqtt out",
+    "z": "b7c6b2ee8f4047c1",
+    "name": "publish command",
+    "topic": "",
+    "qos": "",
+    "retain": "",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "f14d2a1c9e2a45cf",
+    "x": 790,
+    "y": 160,
+    "wires": []
+  },
+  {
+    "id": "f4ddb95ff28f45fb",
+    "type": "http response",
+    "z": "b7c6b2ee8f4047c1",
+    "name": "command ack",
+    "statusCode": "",
+    "headers": {},
+    "x": 770,
+    "y": 210,
+    "wires": []
+  },
+  {
+    "id": "5c7309e7ba3a4a12",
+    "type": "mqtt in",
+    "z": "b7c6b2ee8f4047c1",
+    "name": "result stream",
+    "topic": "home/ai/action_result",
+    "qos": "0",
+    "datatype": "auto",
+    "broker": "f14d2a1c9e2a45cf",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 140,
+    "y": 280,
+    "wires": [
+      [
+        "e3fe17dc75ec4d6a"
+      ]
+    ]
+  },
+  {
+    "id": "e3fe17dc75ec4d6a",
+    "type": "json",
+    "z": "b7c6b2ee8f4047c1",
+    "name": "parse result",
+    "property": "payload",
+    "action": "obj",
+    "pretty": false,
+    "x": 330,
+    "y": 280,
+    "wires": [
+      [
+        "f7ec5764386f45fd"
+      ]
+    ]
+  },
+  {
+    "id": "f7ec5764386f45fd",
+    "type": "function",
+    "z": "b7c6b2ee8f4047c1",
+    "name": "store last result",
+    "func": "flow.set('ai_last_result', msg.payload);\nreturn msg;",
+    "outputs": 1,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 530,
+    "y": 280,
+    "wires": [
+      [
+        "6dd3bf26f2df4ca8"
+      ]
+    ]
+  },
+  {
+    "id": "6dd3bf26f2df4ca8",
+    "type": "debug",
+    "z": "b7c6b2ee8f4047c1",
+    "name": "result debug",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 730,
+    "y": 280,
+    "wires": []
+  },
+  {
+    "id": "c65073963ecf4b7d",
+    "type": "http in",
+    "z": "b7c6b2ee8f4047c1",
+    "name": "GET /ai-result",
+    "url": "/ai-result",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 140,
+    "y": 350,
+    "wires": [
+      [
+        "b470fd7b555e4511"
+      ]
+    ]
+  },
+  {
+    "id": "b470fd7b555e4511",
+    "type": "function",
+    "z": "b7c6b2ee8f4047c1",
+    "name": "read last result",
+    "func": "const value = flow.get('ai_last_result') || { status: 'idle', detail: 'No result yet' };\nmsg.headers = { 'Content-Type': 'application/json' };\nmsg.payload = JSON.stringify(value);\nreturn msg;",
+    "outputs": 1,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 340,
+    "y": 350,
+    "wires": [
+      [
+        "03ad03ca106f4719"
+      ]
+    ]
+  },
+  {
+    "id": "03ad03ca106f4719",
+    "type": "http response",
+    "z": "b7c6b2ee8f4047c1",
+    "name": "",
+    "statusCode": "",
+    "headers": {},
+    "x": 550,
+    "y": 350,
+    "wires": []
+  },
+  {
+    "id": "f31f074ec9f144ea",
+    "type": "mqtt in",
+    "z": "b7c6b2ee8f4047c1",
+    "name": "mode stream",
+    "topic": "home/ai/mode",
+    "qos": "0",
+    "datatype": "auto",
+    "broker": "f14d2a1c9e2a45cf",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 130,
+    "y": 420,
+    "wires": [
+      [
+        "54e15d4046d84e15"
+      ]
+    ]
+  },
+  {
+    "id": "54e15d4046d84e15",
+    "type": "json",
+    "z": "b7c6b2ee8f4047c1",
+    "name": "parse mode",
+    "property": "payload",
+    "action": "obj",
+    "pretty": false,
+    "x": 320,
+    "y": 420,
+    "wires": [
+      [
+        "7e4571f73900480e"
+      ]
+    ]
+  },
+  {
+    "id": "7e4571f73900480e",
+    "type": "function",
+    "z": "b7c6b2ee8f4047c1",
+    "name": "store mode",
+    "func": "flow.set('ai_mode', msg.payload);\nreturn msg;",
+    "outputs": 1,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 510,
+    "y": 420,
+    "wires": [
+      [
+        "52807ecfa8254455"
+      ]
+    ]
+  },
+  {
+    "id": "52807ecfa8254455",
+    "type": "debug",
+    "z": "b7c6b2ee8f4047c1",
+    "name": "mode debug",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 710,
+    "y": 420,
+    "wires": []
+  },
+  {
+    "id": "27df5d52f2cb42ac",
+    "type": "http in",
+    "z": "b7c6b2ee8f4047c1",
+    "name": "POST /ai-mode",
+    "url": "/ai-mode",
+    "method": "post",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 130,
+    "y": 500,
+    "wires": [
+      [
+        "a4f0f7f5f2d84908"
+      ]
+    ]
+  },
+  {
+    "id": "a4f0f7f5f2d84908",
+    "type": "json",
+    "z": "b7c6b2ee8f4047c1",
+    "name": "parse mode body",
+    "property": "payload",
+    "action": "obj",
+    "pretty": false,
+    "x": 330,
+    "y": 500,
+    "wires": [
+      [
+        "0a6166f8627f4f6e"
+      ]
+    ]
+  },
+  {
+    "id": "0a6166f8627f4f6e",
+    "type": "function",
+    "z": "b7c6b2ee8f4047c1",
+    "name": "validate + publish mode",
+    "func": "const mode = String((msg.payload || {}).mode || '').trim().toLowerCase();\nif (!['suggest', 'ask', 'auto'].includes(mode)) {\n    return [null, {\n        payload: { ok: false, error: 'mode must be suggest|ask|auto' },\n        statusCode: 400,\n        req: msg.req,\n        res: msg.res\n    }];\n}\nconst out = { topic: 'home/ai/mode/set', payload: mode };\nconst ack = {\n    payload: { ok: true, mode },\n    req: msg.req,\n    res: msg.res\n};\nreturn [out, ack];",
+    "outputs": 2,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 560,
+    "y": 500,
+    "wires": [
+      [
+        "888fe53f4a4f44a9"
+      ],
+      [
+        "b625e286bf184c7f"
+      ]
+    ]
+  },
+  {
+    "id": "888fe53f4a4f44a9",
+    "type": "mqtt out",
+    "z": "b7c6b2ee8f4047c1",
+    "name": "publish mode set",
+    "topic": "",
+    "qos": "",
+    "retain": "",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "f14d2a1c9e2a45cf",
+    "x": 790,
+    "y": 480,
+    "wires": []
+  },
+  {
+    "id": "b625e286bf184c7f",
+    "type": "http response",
+    "z": "b7c6b2ee8f4047c1",
+    "name": "mode ack",
+    "statusCode": "",
+    "headers": {},
+    "x": 780,
+    "y": 530,
+    "wires": []
+  },
+  {
+    "id": "51e638f0f8894a8e",
+    "type": "http in",
+    "z": "b7c6b2ee8f4047c1",
+    "name": "GET /ai-mode",
+    "url": "/ai-mode",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 130,
+    "y": 570,
+    "wires": [
+      [
+        "4f2480124ac44de7"
+      ]
+    ]
+  },
+  {
+    "id": "4f2480124ac44de7",
+    "type": "function",
+    "z": "b7c6b2ee8f4047c1",
+    "name": "read mode",
+    "func": "const mode = flow.get('ai_mode') || { mode: 'auto', detail: 'default' };\nmsg.headers = { 'Content-Type': 'application/json' };\nmsg.payload = JSON.stringify(mode);\nreturn msg;",
+    "outputs": 1,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 330,
+    "y": 570,
+    "wires": [
+      [
+        "f7e7347cf77e41a4"
+      ]
+    ]
+  },
+  {
+    "id": "f7e7347cf77e41a4",
+    "type": "http response",
+    "z": "b7c6b2ee8f4047c1",
+    "name": "",
+    "statusCode": "",
+    "headers": {},
+    "x": 550,
+    "y": 570,
+    "wires": []
+  }
+]

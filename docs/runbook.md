@@ -8,6 +8,7 @@ From repo root:
 .\scripts\dev.ps1 up
 .\scripts\dev.ps1 ps
 .\scripts\dev.ps1 health
+.\scripts\dev.ps1 uptime
 ```
 
 ## Stop and Restart
@@ -29,6 +30,7 @@ From repo root:
 
 ```powershell
 .\scripts\dev.ps1 smoke
+.\scripts\dev.ps1 ai-smoke
 ```
 
 ## Backup
@@ -36,6 +38,11 @@ From repo root:
 ```powershell
 .\scripts\dev.ps1 backup
 ```
+
+For always-on hosting, schedule:
+
+1. `.\scripts\dev.ps1 uptime` every 5 minutes
+2. `.\scripts\dev.ps1 backup` daily (off-peak)
 
 Additional options:
 
@@ -52,6 +59,19 @@ Additional options:
 - InfluxDB: `http://localhost:8181`
 - Grafana: `http://localhost:3000`
 - Ollama API: `http://localhost:11434`
+- Node-RED AI Console: `http://localhost:1880/ai-console` (after importing flow)
+
+## Grafana Dashboards
+
+Provisioned dashboard:
+
+- `AI Action Guardrails`
+
+If missing, restart Grafana:
+
+```powershell
+.\scripts\dev.ps1 restart grafana
+```
 
 ## AI Action Bridge
 
@@ -66,6 +86,7 @@ Additional options:
 
 ```powershell
 docker exec mosquitto sh -lc "mosquitto_pub -h localhost -u '<MQTT_USER>' -P '<MQTT_PASSWORD>' -t home/ai/command -m 'turn off plug 2'"
+docker exec mosquitto sh -lc "mosquitto_pub -h localhost -u '<MQTT_USER>' -P '<MQTT_PASSWORD>' -t home/ai/command -m 'turn on plug 3 and 4 and turn off plug 2'"
 ```
 
 4. Read result:
@@ -73,6 +94,42 @@ docker exec mosquitto sh -lc "mosquitto_pub -h localhost -u '<MQTT_USER>' -P '<M
 ```powershell
 docker exec mosquitto sh -lc "mosquitto_sub -h localhost -u '<MQTT_USER>' -P '<MQTT_PASSWORD>' -t home/ai/action_result -C 1 -v"
 ```
+
+Set mode:
+
+```powershell
+docker exec mosquitto sh -lc "mosquitto_pub -h localhost -u '<MQTT_USER>' -P '<MQTT_PASSWORD>' -t home/ai/mode/set -m ask"
+docker exec mosquitto sh -lc "mosquitto_sub -h localhost -u '<MQTT_USER>' -P '<MQTT_PASSWORD>' -t home/ai/mode -C 1 -v"
+```
+
+Mode semantics:
+
+- `suggest`: always rejects execution.
+- `ask`: requires explicit confirmation.
+- `auto`: executes if guardrails pass.
+
+Default mode in this repo is `auto`.
+
+## Node-RED Control Console
+
+1. Open `http://localhost:1880`.
+2. Import `nodered/flows/ai-control-console.json`.
+3. Configure MQTT broker credentials in imported flow (`MQTT_USER` / `MQTT_PASSWORD` from `docker/.env`).
+4. Deploy and open `http://localhost:1880/ai-console`.
+
+## Voice Command (PC)
+
+Run:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\voice-bridge.ps1
+```
+
+Behavior:
+
+- Press Enter to use microphone dictation (if available), or type command directly.
+- Publishes commands to `home/ai/command` with source `voice`.
+- Reads one response from `home/ai/action_result`.
 
 ## Image Pins
 
