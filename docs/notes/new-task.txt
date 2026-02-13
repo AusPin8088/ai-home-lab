@@ -1,161 +1,119 @@
-﻿Yep. Hereâ€™s a **detailed, â€œdo this nextâ€ guide** for your **current setup** + how to use **Codex in your IDE** to drive the project.
-
-Iâ€™m assuming youâ€™re on **Windows 11 + VS Code + Docker Desktop**, and your repo is repo root with `docker/compose.yaml`, plus services like HA, Mosquitto, Node-RED, Grafana, Ollama, and your Python agent writing to InfluxDB 3 Core (8181).
-
----
-
-## 1) Lock down your current stack first (stability)
-
-Right now youâ€™re on `quay.io/influxdb/influxdb3-core:latest` and logs show a nightly. Thatâ€™s unstable.
-
-### 1.1 Pin InfluxDB 3 to a fixed tag
-
-In `docker/compose.yaml`, change the image from:
-
-* `quay.io/influxdb/influxdb3-core:latest`
-  to a **specific version tag** (stable). Donâ€™t use `latest`. (This is a general best practice; your own summary already notes it.)
-
-### 1.2 Stop running InfluxDB with `--without-auth`
-
-Keeping DB unauthenticated is fine for a 10-min test. Not fine for a real lab.
-
-* Remove `--without-auth`
-* Add proper auth (token/user) and keep secrets in `.env`
-
-(InfluxDB 3 Core is SQL-first and not the same as Influx 1/2, so donâ€™t follow random â€œ8086 bucketâ€ tutorials.)
-
----
-
-## 2) What to do in Grafana (InfluxDB 3 is SQL-first)
-
-Because youâ€™re on InfluxDB 3 Core, the Grafana datasource + queries will look different from Influx 1/2 guides.
-
-### Recommended approach (clean and scalable)
-
-* Keep letting your **agent** write curated tables like `mqtt_event`, `agent_suggestion` (you already have these).
-* Grafana reads from InfluxDB for charts.
-* Later, add Postgres for â€œbrain memoryâ€ (approvals, metadata, embeddings) if you want.
-
-This keeps HA out of the DB-writing problem and avoids tutorial mismatch.
-
----
-
-## 3) IDE setup: Codex in VS Code (the best path for you)
-
-There are two â€œCodexâ€ tools you should use together:
-
-1. **Codex VS Code Extension** (in-editor agent) ([OpenAI Developers][1])
-2. **Codex CLI** (terminal agent inside your repo) ([OpenAI Developers][2])
-
-### 3.1 Install the VS Code extension
-
-Install **Codex â€“ OpenAIâ€™s coding agent** from the VS Code Marketplace (publisher OpenAI). ([Visual Studio Marketplace][3])
-
-After install:
-
-* Sign in / connect your plan (Plus/Pro/Business/Edu/Enterprise include Codex). ([OpenAI Developers][1])
-
-### 3.2 Give Codex the *right workspace*
-
-Open VS Code at the repo root:
-
-* repo root (not a subfolder)
-
-So it sees:
-
-* `docker/compose.yaml`
-* `.env`
-* `services/agent/â€¦`
-* any scripts, docs, etc.
-
-### 3.3 Set up a â€œsafe workflowâ€ in Codex (important)
-
-In VS Code Codex, use this rule:
-
-* **Plan mode first** (ask it to propose steps)
-* Then **apply changes**
-* Then **run tests** (docker compose up, health checks, query checks)
-
-Codex is designed to read/edit/run code, but you still want it working like a disciplined teammate. ([OpenAI Developers][4])
-
----
-
-## 4) Install and use Codex CLI (this is huge for your stack)
-
-Codex CLI is an agent that can operate inside a directory (read/change/run code). Itâ€™s open source and meant for terminal workflows. ([OpenAI Developers][2])
-
-### 4.1 Install Codex CLI
-
-Follow the official Codex CLI doc for install steps and auth. ([OpenAI Developers][2])
-
-### 4.2 Use it correctly in this repo
-
-Open terminal at:
-
-* repo root
-
-Then you can ask it to do things like:
-
-* â€œPin InfluxDB image version and remove without-auth; update agent and grafana config accordingly.â€
-* â€œAdd an `.env.example` and move secrets out of compose.â€
-* â€œCreate a Grafana dashboard JSON for mqtt_event + agent_suggestion.â€
-* â€œAdd make targets: up/down/logs/health.â€
-
-Codex CLI is explicitly built to work locally in the selected directory. ([OpenAI Developers][2])
-
----
-
-## 5) What language to use (for your â€œbrainâ€ code)
-
-For your labâ€™s agent service:
-
-* **Python** is the fastest path (FastAPI + paho-mqtt + Influx client/SQL calls)
-* Keep it as a container (`services/agent`) so it migrates to any OS.
-
-You already have `services/agent/app.py`, so donâ€™t rewriteâ€”extend.
-
----
-
-## 6) The exact â€œCodex tasksâ€ you should run next (copy/paste)
-
-Use these as prompts to Codex (VS Code or CLI):
-
-1. **Stabilize Influx**
-
-> â€œPin influxdb3-core image to a stable tag (not latest), remove --without-auth, add token-based auth using .env. Update agent and grafana to authenticate.â€
-
-2. **Make a reproducible dev workflow**
-
-> â€œAdd Makefile tasks: up, down, logs, ps, restart, healthcheck. Add README with exact commands and ports.â€
-
-3. **Standardize schema**
-
-> â€œCreate a schema doc for mqtt_event, agent_suggestion, and add agent_action_audit. Update agent to write consistent fields.â€
-
-4. **Grafana dashboards**
-
-> â€œCreate a Grafana dashboard JSON that shows: mqtt_event count by topic, last device state, suggestions timeline, and error rate.â€
-
----
-
-## 7) One warning (so you donâ€™t get stuck)
-
-InfluxDB 3 Core â‰  InfluxDB 2 tutorials.
-So if you want â€œtutorial compatibilityâ€, youâ€™d revert to Influx 2.8.
-But since youâ€™re building an intelligent lab, keeping v3 is fineâ€”just **treat your agent as the ingestion layer**.
-
----
-
-## Quick check: what IDE are you using now?
-
-If itâ€™s **VS Code**, tell me:
-
-* Are you coding inside **Windows** or **WSL2**?
-
-Then Iâ€™ll give you the cleanest â€œCodex + Docker + repoâ€ workflow (terminal commands, recommended settings, and a ready-to-use task list).
-
-[1]: https://developers.openai.com/codex/ide?utm_source=chatgpt.com "Codex IDE extension - developers.openai.com"
-[2]: https://developers.openai.com/codex/cli?utm_source=chatgpt.com "Codex CLI - developers.openai.com"
-[3]: https://marketplace.visualstudio.com/items?itemName=OpenAI.chatgpt&utm_source=chatgpt.com "Codex â€“ OpenAIâ€™s coding agent - Visual Studio Marketplace"
-[4]: https://developers.openai.com/codex?utm_source=chatgpt.com "Codex - developers.openai.com"
-
+﻿AI Home Lab Roadmap (From Current State to Interactive Assistant)
+Summary
+You already have the core platform running (HA + MQTT + InfluxDB3 + Grafana + Ollama + Agent) and a guarded AI action bridge implemented.
+This roadmap moves you from “works in lab” to “interactive Jarvis-like assistant” in controlled phases with clear acceptance checks.
+
+Scope and Outcome
+Keep safety-first architecture: AI can suggest and act only through guardrails.
+Add practical interaction channels in this order: MQTT command -> Node-RED control UI -> PC voice -> desktop character.
+Add controlled autonomy modes (Suggest / Ask / Auto for whitelisted safety cases).
+Keep full observability and auditability in Influx/Grafana.
+Public Interfaces / Contracts (Canonical)
+MQTT command topic: home/ai/command
+Payload: plain text command, e.g. turn off plug 2.
+MQTT result topic: home/ai/action_result
+Payload JSON shape:
+{"status":"executed|rejected|failed","command":"...","action":"turn_on|turn_off|none","outlet":1-4,"entity_id":"switch....","detail":"...","time":<unix_seconds>}
+Influx measurements:
+mqtt_event, agent_suggestion, agent_action.
+Home Assistant service contract:
+POST /api/services/switch/turn_on|turn_off with entity_id.
+Phase Plan
+Phase 1 — Close the Loop on AI Action Bridge
+Set HA_TOKEN in docker/.env.
+Rebuild/restart only agent.
+Validate one turn off plug 2 and one turn on plug 2.
+Confirm result topic emits status=executed.
+Confirm iox.agent_action rows are written with correct status/detail.
+Acceptance checks:
+
+docker logs --tail 30 homelab-agent has no HA_TOKEN is empty.
+MQTT result payload shows executed for valid commands.
+Plug state actually changes in Home Assistant UI.
+Influx query on iox.agent_action returns recent execution rows.
+Phase 2 — Guardrail Hardening (Before More Autonomy)
+Add strict allowlist for actionable entities (already mapped for plug 1..4; keep only these).
+Add rate limit for action commands (default: max 1 command per 2 seconds).
+Add cooldown per outlet for risky flip-flop (default: 3 seconds).
+Reject ambiguous commands unless explicit confirmation pattern exists.
+Add command source tagging (source=node_red|voice|manual) in action log detail.
+Acceptance checks:
+
+Burst of commands is throttled and logged as rejected.
+Ambiguous prompts are rejected with clear reason.
+Only allowlisted entities can execute.
+Grafana panel shows executed vs rejected count trend.
+Phase 3 — Node-RED “Control Console” (Fastest Usable UX)
+Build Node-RED flow: text input -> publish home/ai/command.
+Add result subscriber node for home/ai/action_result.
+Add small dashboard view: last command, status, detail.
+Add quick buttons: Plug 1 ON/OFF ... Plug 4 ON/OFF.
+Keep text + button actions both routed through same topic for one audit path.
+Acceptance checks:
+
+You can issue on/off from browser at http://localhost:1880.
+Results appear in UI within 2 seconds.
+All actions still recorded in agent_action.
+Phase 4 — Voice Command on PC (No Character Yet)
+Add local voice capture app/service on your desktop.
+Convert speech-to-text and publish to home/ai/command.
+Read back result via TTS from home/ai/action_result.
+Add push-to-talk mode first, wake-word later.
+Default stack choice:
+
+STT local-first if feasible; fallback cloud STT if latency/accuracy is poor.
+Keep action execution in existing agent bridge (do not bypass).
+Acceptance checks:
+
+Say “turn off plug 2” and action executes.
+Voice feedback announces executed/rejected.
+End-to-end latency target: under 3 seconds for simple commands.
+Phase 5 — Desktop Character Layer
+Build a lightweight desktop UI with character avatar, mic button, transcript, and status bubble.
+Character only visualizes state and speaks responses; control path remains MQTT bridge.
+Show safety mode badge: Suggest, Ask, Auto.
+Add “recent actions” mini log in UI (read from result topic).
+Acceptance checks:
+
+Character receives and displays latest command/result in real time.
+Voice + click commands both work.
+No direct device API calls from UI (all via bridge).
+Phase 6 — Autonomy Modes (Jarvis-like Behavior with Limits)
+Mode A Suggest: no actions, suggestions only.
+Mode B Ask: propose action and require user confirmation.
+Mode C Auto: only whitelisted safety rules (example: overload -> turn off affected plug + alert).
+Store active mode in one source of truth (HA helper entity or config topic).
+Acceptance checks:
+
+Mode changes are auditable.
+Same command behaves differently by mode as defined.
+Auto mode never executes non-whitelisted command.
+Phase 7 — Always-On Hosting
+Migrate runtime from daily PC to always-on host (mini PC/NAS).
+Preserve same compose and env contracts.
+Move backups to scheduled daily job.
+Add uptime monitor for core endpoints.
+Acceptance checks:
+
+Works after host reboot without manual intervention.
+7-day continuous health checks pass.
+Backup + restore drill succeeds once.
+Test Cases and Scenarios
+Happy path: turn on plug 2 -> executed -> state changes -> action logged.
+Rejection path: turn on everything -> rejected -> reason logged.
+Auth path: invalid HA_TOKEN -> failed, clear detail.
+Safety path: simulated overload event -> alert generated and action follows active mode.
+Concurrency path: 10 rapid commands -> throttled behavior per policy.
+Recovery path: restart agent while system running -> reconnects and resumes.
+Defaults and Assumptions
+Interaction priority: Node-RED first, then PC voice, then character UI.
+Assistant personality UI is out-of-band; control stays MQTT-topic based.
+Only plugs 1..4 are controllable by AI at this phase.
+Home Assistant remains the only actuator authority.
+InfluxDB 3 SQL remains canonical telemetry store.
+Google Home integration is optional fallback, not primary UX.
+Definition of Done (Roadmap Complete)
+You can command devices by text and voice through one guarded bridge.
+You can observe every decision/action in Grafana and Influx.
+You can switch autonomy mode safely.
+System runs 24/7 on always-on host with backup/restore confidence.
