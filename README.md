@@ -76,6 +76,19 @@ Restart:
 - Grafana: `http://localhost:3000`
 - Ollama API: `http://localhost:11434`
 
+## AI Action Bridge
+
+The agent now supports guarded action execution for plugs 1..4:
+
+- publish command text to MQTT topic `home/ai/command`
+- agent parses command and executes HA `switch.turn_on`/`switch.turn_off`
+- result is published to `home/ai/action_result`
+- audit rows are stored in Influx measurement `agent_action`
+
+Required in `docker/.env`:
+
+- `HA_TOKEN=<home-assistant-long-lived-token>`
+
 ## Grafana Datasource
 
 Grafana auto-provisions `InfluxDB3` datasource from:

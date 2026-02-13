@@ -53,6 +53,27 @@ Additional options:
 - Grafana: `http://localhost:3000`
 - Ollama API: `http://localhost:11434`
 
+## AI Action Bridge
+
+1. Set `HA_TOKEN` in `docker/.env` (Home Assistant long-lived token).
+2. Restart agent:
+
+```powershell
+.\scripts\dev.ps1 restart agent
+```
+
+3. Publish command:
+
+```powershell
+docker exec mosquitto sh -lc "mosquitto_pub -h localhost -u '<MQTT_USER>' -P '<MQTT_PASSWORD>' -t home/ai/command -m 'turn off plug 2'"
+```
+
+4. Read result:
+
+```powershell
+docker exec mosquitto sh -lc "mosquitto_sub -h localhost -u '<MQTT_USER>' -P '<MQTT_PASSWORD>' -t home/ai/action_result -C 1 -v"
+```
+
 ## Image Pins
 
 | Service | Image Reference |
