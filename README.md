@@ -81,6 +81,34 @@ Restart:
 - Grafana: `http://localhost:3000`
 - Ollama API: `http://localhost:11434`
 
+## Regional Settings (Celsius + Xiaomi OAuth)
+
+Home Assistant units are configured in `ha/config/configuration.yaml`:
+
+```yaml
+homeassistant:
+  unit_system: metric
+  temperature_unit: C
+```
+
+Apply changes:
+
+```powershell
+docker restart homeassistant
+```
+
+For Xiaomi Home OAuth on Windows, `homeassistant.local` must resolve locally.
+Run PowerShell as Administrator once:
+
+```powershell
+Add-Content -Path "C:\Windows\System32\drivers\etc\hosts" -Value "`n127.0.0.1 homeassistant.local"
+ipconfig /flushdns
+```
+
+Then open:
+
+- `http://homeassistant.local:8123`
+
 ## AI Action Bridge
 
 The agent now supports guarded action execution for plugs 1..4:

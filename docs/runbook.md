@@ -73,6 +73,130 @@ If missing, restart Grafana:
 .\scripts\dev.ps1 restart grafana
 ```
 
+### Home Power Dashboard Query Fixes (P304M)
+
+If `Outlet switch states` shows `No data`, it is usually because the panel time range is short and no switch toggles happened in that window.
+
+Use these SQL queries in your custom dashboard panels.
+
+`Outlet switch states (events table)`:
+
+```sql
+SELECT
+  time,
+  CASE
+    WHEN topic = 'home/ha/switch/p304m_tapo_p304m_1/state' THEN 'Plug 1'
+    WHEN topic = 'home/ha/switch/p304m_tapo_p304m_2/state' THEN 'Plug 2'
+    WHEN topic = 'home/ha/switch/p304m_tapo_p304m_3/state' THEN 'Plug 3'
+    WHEN topic = 'home/ha/switch/p304m_tapo_p304m_4/state' THEN 'Plug 4'
+    ELSE topic
+  END AS outlet,
+  payload AS state
+FROM mqtt_event
+WHERE $__timeFilter(time)
+  AND topic IN (
+    'home/ha/switch/p304m_tapo_p304m_1/state',
+    'home/ha/switch/p304m_tapo_p304m_2/state',
+    'home/ha/switch/p304m_tapo_p304m_3/state',
+    'home/ha/switch/p304m_tapo_p304m_4/state'
+  )
+ORDER BY time DESC
+LIMIT 200
+```
+
+`Outlet current state (always shows latest row per plug)`:
+
+```sql
+WITH latest AS (
+  SELECT topic, MAX(time) AS max_time
+  FROM mqtt_event
+  WHERE topic IN (
+    'home/ha/switch/p304m_tapo_p304m_1/state',
+    'home/ha/switch/p304m_tapo_p304m_2/state',
+    'home/ha/switch/p304m_tapo_p304m_3/state',
+    'home/ha/switch/p304m_tapo_p304m_4/state'
+  )
+  GROUP BY topic
+)
+SELECT
+  CASE
+    WHEN e.topic = 'home/ha/switch/p304m_tapo_p304m_1/state' THEN 'Plug 1'
+    WHEN e.topic = 'home/ha/switch/p304m_tapo_p304m_2/state' THEN 'Plug 2'
+    WHEN e.topic = 'home/ha/switch/p304m_tapo_p304m_3/state' THEN 'Plug 3'
+    WHEN e.topic = 'home/ha/switch/p304m_tapo_p304m_4/state' THEN 'Plug 4'
+    ELSE e.topic
+  END AS outlet,
+  e.payload AS state,
+  e.time
+FROM mqtt_event e
+JOIN latest l ON e.topic = l.topic AND e.time = l.max_time
+ORDER BY outlet
+```
+
+`Latest power readings (table)`:
+
+```sql
+SELECT
+  time,
+  CASE
+    WHEN topic LIKE '%_p304m_1_current_consumption/state' THEN 'Plug 1'
+    WHEN topic LIKE '%_p304m_2_current_consumption/state' THEN 'Plug 2'
+    WHEN topic LIKE '%_p304m_3_current_consumption/state' THEN 'Plug 3'
+    WHEN topic LIKE '%_p304m_4_current_consumption/state' THEN 'Plug 4'
+    ELSE topic
+  END AS outlet,
+  CAST(payload AS DOUBLE) AS watts
+FROM mqtt_event
+WHERE $__timeFilter(time)
+  AND topic LIKE 'home/ha/sensor/%current_consumption/state'
+  AND topic LIKE '%p304m%'
+ORDER BY time DESC
+LIMIT 200
+```
+
+`Xiaomi fan on/off states (table)`:
+
+```sql
+SELECT
+  time,
+  topic,
+  payload AS state
+FROM mqtt_event
+WHERE $__timeFilter(time)
+  AND topic LIKE 'home/ha/fan/%/state'
+ORDER BY time DESC
+LIMIT 200
+```
+
+`Combined device states (plug + fan)`:
+
+```sql
+SELECT
+  time,
+  CASE
+    WHEN topic = 'home/ha/switch/p304m_tapo_p304m_1/state' THEN 'Plug 1'
+    WHEN topic = 'home/ha/switch/p304m_tapo_p304m_2/state' THEN 'Plug 2'
+    WHEN topic = 'home/ha/switch/p304m_tapo_p304m_3/state' THEN 'Plug 3'
+    WHEN topic = 'home/ha/switch/p304m_tapo_p304m_4/state' THEN 'Plug 4'
+    WHEN topic LIKE 'home/ha/fan/%/state' THEN topic
+    ELSE topic
+  END AS device,
+  payload AS state
+FROM mqtt_event
+WHERE $__timeFilter(time)
+  AND (
+    topic IN (
+      'home/ha/switch/p304m_tapo_p304m_1/state',
+      'home/ha/switch/p304m_tapo_p304m_2/state',
+      'home/ha/switch/p304m_tapo_p304m_3/state',
+      'home/ha/switch/p304m_tapo_p304m_4/state'
+    )
+    OR topic LIKE 'home/ha/fan/%/state'
+  )
+ORDER BY time DESC
+LIMIT 300
+```
+
 ## AI Action Bridge
 
 1. Set `HA_TOKEN` in `docker/.env` (Home Assistant long-lived token).
