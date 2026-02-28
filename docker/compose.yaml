@@ -119,9 +119,14 @@
       - ACTION_PARSE_WITH_OLLAMA=${ACTION_PARSE_WITH_OLLAMA:-true}
       - ACTION_COMMAND_TOPIC=${ACTION_COMMAND_TOPIC:-home/ai/command}
       - ACTION_RESULT_TOPIC=${ACTION_RESULT_TOPIC:-home/ai/action_result}
+      - ACTION_DEVICE_SUGGESTION_TOPIC=${ACTION_DEVICE_SUGGESTION_TOPIC:-home/ai/device_suggestion}
       - ACTION_MODE_TOPIC=${ACTION_MODE_TOPIC:-home/ai/mode}
       - ACTION_MODE_SET_TOPIC=${ACTION_MODE_SET_TOPIC:-home/ai/mode/set}
       - ACTION_MODE_DEFAULT=${ACTION_MODE_DEFAULT:-auto}
+      - ACTION_DEVICE_DISCOVERY_ENABLED=${ACTION_DEVICE_DISCOVERY_ENABLED:-true}
+      - ACTION_DEVICE_DISCOVERY_COOLDOWN_SECONDS=${ACTION_DEVICE_DISCOVERY_COOLDOWN_SECONDS:-600}
+      - ACTION_DEVICE_DISCOVERY_IGNORE_OBJECTID_REGEX=${ACTION_DEVICE_DISCOVERY_IGNORE_OBJECTID_REGEX:-(auto_off_enabled|auto_update_enabled|led|brightness(?:_p_\\d+_\\d+)?|physical_controls_locked(?:_p_\\d+_\\d+)?|indicator(?:_light)?|child_lock|buzzer|beep|display|screen|volume)$}
+      - ACTION_DYNAMIC_ALIAS_STORE_PATH=${ACTION_DYNAMIC_ALIAS_STORE_PATH:-/app/runtime/dynamic_aliases.json}
       - ACTION_RATE_LIMIT_SECONDS=${ACTION_RATE_LIMIT_SECONDS:-2}
       - ACTION_FLIP_COOLDOWN_SECONDS=${ACTION_FLIP_COOLDOWN_SECONDS:-3}
       - ACTION_HTTP_TIMEOUT=${ACTION_HTTP_TIMEOUT:-20}
@@ -137,6 +142,8 @@
       - INFLUX_TOKEN=${INFLUXDB_TOKEN}
       - INFLUX_ORG=${INFLUXDB_ORG}
       - INFLUX_BUCKET=${INFLUXDB_DATABASE}
+    volumes:
+      - ../runtime/agent:/app/runtime
     depends_on:
       mosquitto:
         condition: service_started

@@ -211,12 +211,19 @@ LIMIT 300
 ```powershell
 docker exec mosquitto sh -lc "mosquitto_pub -h localhost -u '<MQTT_USER>' -P '<MQTT_PASSWORD>' -t home/ai/command -m 'turn off plug 2'"
 docker exec mosquitto sh -lc "mosquitto_pub -h localhost -u '<MQTT_USER>' -P '<MQTT_PASSWORD>' -t home/ai/command -m 'turn on plug 3 and 4 and turn off plug 2'"
+docker exec mosquitto sh -lc "mosquitto_pub -h localhost -u '<MQTT_USER>' -P '<MQTT_PASSWORD>' -t home/ai/command -m 'what can xiaomi fan do'"
+docker exec mosquitto sh -lc "mosquitto_pub -h localhost -u '<MQTT_USER>' -P '<MQTT_PASSWORD>' -t home/ai/command -m 'what devices do you control'"
+docker exec mosquitto sh -lc "mosquitto_pub -h localhost -u '<MQTT_USER>' -P '<MQTT_PASSWORD>' -t home/ai/command -m 'set xiaomi fan speed to 66'"
+docker exec mosquitto sh -lc "mosquitto_pub -h localhost -u '<MQTT_USER>' -P '<MQTT_PASSWORD>' -t home/ai/command -m 'increase xiaomi fan speed'"
+docker exec mosquitto sh -lc "mosquitto_pub -h localhost -u '<MQTT_USER>' -P '<MQTT_PASSWORD>' -t home/ai/command -m 'turn on xiaomi fan oscillation'"
+docker exec mosquitto sh -lc "mosquitto_pub -h localhost -u '<MQTT_USER>' -P '<MQTT_PASSWORD>' -t home/ai/command -m 'set xiaomi fan to sleeping mode'"
 ```
 
 4. Read result:
 
 ```powershell
 docker exec mosquitto sh -lc "mosquitto_sub -h localhost -u '<MQTT_USER>' -P '<MQTT_PASSWORD>' -t home/ai/action_result -C 1 -v"
+docker exec mosquitto sh -lc "mosquitto_sub -h localhost -u '<MQTT_USER>' -P '<MQTT_PASSWORD>' -t home/ai/device_suggestion -C 1 -v"
 ```
 
 Set mode:
@@ -234,12 +241,65 @@ Mode semantics:
 
 Default mode in this repo is `auto`.
 
+Approve/reject newly discovered devices:
+
+```powershell
+docker exec mosquitto sh -lc "mosquitto_pub -h localhost -u '<MQTT_USER>' -P '<MQTT_PASSWORD>' -t home/ai/command -m 'approve device fan.some_entity as living room fan'"
+docker exec mosquitto sh -lc "mosquitto_pub -h localhost -u '<MQTT_USER>' -P '<MQTT_PASSWORD>' -t home/ai/command -m 'reject device fan.some_entity'"
+```
+
+Ignore helper/config entities in discovery suggestions (recommended for Xiaomi-style integrations):
+
+- Default ignore pattern already skips entities like `physical_controls_locked`, `brightness`, `indicator`, `auto_off_enabled`.
+- Config key in `docker/.env`: `ACTION_DEVICE_DISCOVERY_IGNORE_OBJECTID_REGEX`
+- After changing this key, restart only agent:
+
+```powershell
+.\scripts\dev.ps1 restart agent
+```
+
+If old suggestions are still visible in Node-RED UI, use the `Clear` button in the `New Device Suggestions` section.
+
+Capability query result shape:
+
+- `action=capabilities`
+- `capabilities=[{target, entity_id, domain, allowed, supported_actions}]`
+
+Fan command examples:
+
+- `set xiaomi fan speed to 33|66|100`
+- `set xiaomi fan speed low|medium|high`
+- `increase xiaomi fan speed`
+- `decrease xiaomi fan speed`
+- `can you turn the fan a bit` (natural phrase -> increase speed)
+- `turn the fan down a bit` (natural phrase -> decrease speed)
+- `turn on xiaomi fan oscillation`
+- `turn off xiaomi fan oscillation`
+- `set xiaomi fan to sleeping mode`
+- `set xiaomi fan to direct breeze`
+
+If fan alias commands are rejected with `no target device found`:
+
+1. Verify alias persistence in `runtime/agent/dynamic_aliases.json`.
+2. Restart agent: `.\scripts\dev.ps1 restart agent`.
+3. Re-test with:
+   - `turn off xiaomi fan`
+   - `turn off xiao mi fan`
+   - `what can xiaomi fan do`
+
+Dynamic aliases are persisted at:
+
+- `runtime/agent/dynamic_aliases.json`
+
 ## Node-RED Control Console
 
 1. Open `http://localhost:1880`.
 2. Import `nodered/flows/ai-control-console.json`.
 3. Configure MQTT broker credentials in imported flow (`MQTT_USER` / `MQTT_PASSWORD` from `docker/.env`).
 4. Deploy and open `http://localhost:1880/ai-console`.
+5. In command input:
+   - Press `Enter` to send (same as clicking `Send`).
+   - Use capability query text such as `what can xiaomi fan do`.
 
 ## Voice Command (PC)
 

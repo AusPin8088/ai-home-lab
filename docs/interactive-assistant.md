@@ -17,6 +17,7 @@ Examples:
 Result topic:
 
 - `home/ai/action_result`
+- `home/ai/device_suggestion` (new-device discovery suggestions)
 
 ## 2) Node-RED Console (Browser UI)
 
@@ -30,7 +31,9 @@ Features:
 - quick ON/OFF buttons for plug 1..4
 - mode selector (`suggest`, `ask`, `auto`)
 - live result/status panel
+- capability query panel (example: `what can xiaomi fan do`)
 - simple avatar/status bubble
+- `Enter` key submits command from the text box
 
 ## 3) PC Voice Bridge
 
@@ -68,8 +71,27 @@ Modes:
 - flip cooldown (`ACTION_FLIP_COOLDOWN_SECONDS`)
 - ambiguous prompt rejection unless confirmed
 - source tagging in `iox.agent_action`
+- new devices require explicit approval before becoming controllable
 
-## 6) Validation
+Fan actions supported after approval:
+
+- `turn_on`, `turn_off`
+- `set_percentage` (speed)
+- `increase_speed`, `decrease_speed`
+- `oscillate_on`, `oscillate_off`
+- `set_preset_mode` (`Sleeping Mode`, `Direct Breeze`)
+
+## 6) New Device Discovery
+
+- Agent auto-detects new controllable HA entities from MQTT state topics.
+- Suggestion events are published to `home/ai/device_suggestion`.
+- Approve with:
+  - `approve device fan.some_entity as living room fan`
+- Reject with:
+  - `reject device fan.some_entity`
+- Approved aliases are persisted in `runtime/agent/dynamic_aliases.json`.
+
+## 7) Validation
 
 Run:
 

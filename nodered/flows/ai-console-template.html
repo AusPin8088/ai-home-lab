@@ -1,0 +1,698 @@
+﻿<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI Home Console</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #111827;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --accent: #22c55e;
+      --warn: #f59e0b;
+      --bad: #ef4444;
+      --line: rgba(148,163,184,0.28);
+      --soft: rgba(148,163,184,0.16);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      background: radial-gradient(circle at 20% 10%, #1e293b, var(--bg));
+      color: var(--text);
+    }
+
+    .app {
+      max-width: 900px;
+      margin: 20px auto;
+      padding: 0 14px;
+    }
+
+    .panel {
+      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+
+    .top {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .spacer { flex: 1; }
+
+    .avatar {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #60a5fa, #2563eb);
+      display: grid;
+      place-items: center;
+      box-shadow: 0 0 20px rgba(96,165,250,0.45);
+      font-size: 24px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 30px;
+      line-height: 1.2;
+    }
+
+    .badge {
+      margin-top: 6px;
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      border: 1px solid var(--line);
+      color: var(--muted);
+    }
+    .badge.mode-auto { color: #16a34a; border-color: #16a34a; }
+    .badge.mode-ask { color: #f59e0b; border-color: #f59e0b; }
+    .badge.mode-suggest { color: #38bdf8; border-color: #38bdf8; }
+
+    .row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    input, select, button {
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: #0b1220;
+      color: var(--text);
+      padding: 9px 12px;
+      font-size: 15px;
+    }
+
+    input { flex: 1; min-width: 220px; }
+    button { cursor: pointer; }
+    button.primary { background: #1d4ed8; }
+    button.ghost { background: transparent; }
+    button.approve { background: #166534; }
+    button.reject { background: #7f1d1d; }
+    button.quick { min-width: 88px; }
+    button:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    .chat-box {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: rgba(2, 6, 23, 0.35);
+      padding: 10px;
+      min-height: 260px;
+      max-height: 420px;
+      overflow-y: auto;
+      margin-bottom: 8px;
+    }
+
+    .msg {
+      max-width: 82%;
+      margin-bottom: 8px;
+      padding: 9px 11px;
+      border-radius: 10px;
+      font-size: 14px;
+      line-height: 1.42;
+      word-break: break-word;
+    }
+
+    .msg-user {
+      margin-left: auto;
+      background: rgba(37, 99, 235, 0.25);
+      border: 1px solid rgba(59, 130, 246, 0.35);
+    }
+
+    .msg-ai {
+      margin-right: auto;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid var(--line);
+    }
+
+    .msg-meta {
+      color: var(--muted);
+      font-size: 11px;
+      margin-top: 4px;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 12px;
+      min-height: 18px;
+      margin: 4px 0;
+    }
+
+    .status-ok { color: var(--accent); }
+    .status-warn { color: var(--warn); }
+    .status-bad { color: var(--bad); }
+
+    .hidden { display: none; }
+
+    .section-title {
+      margin: 6px 0 10px;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .suggest-item {
+      border: 1px solid var(--soft);
+      border-radius: 10px;
+      padding: 10px;
+      margin-bottom: 8px;
+    }
+
+    .suggest-title { font-weight: 600; margin-bottom: 4px; }
+    .suggest-meta { color: var(--muted); font-size: 12px; margin-bottom: 8px; word-break: break-all; }
+    .mono { font-family: Consolas, monospace; font-size: 12px; white-space: pre-wrap; }
+
+    details summary {
+      cursor: pointer;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      padding: 16px;
+    }
+
+    .modal {
+      width: min(560px, 100%);
+      background: linear-gradient(180deg, rgba(17,24,39,.96), rgba(15,23,42,.96));
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px;
+      box-shadow: 0 16px 45px rgba(0,0,0,.5);
+    }
+
+    .modal h3 { margin: 0 0 8px; }
+    .modal .meta { color: var(--muted); font-size: 12px; margin-bottom: 10px; word-break: break-all; }
+
+    @media (max-width: 640px) {
+      h1 { font-size: 26px; }
+      .avatar { width: 48px; height: 48px; font-size: 22px; }
+      .chat-box { min-height: 220px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="panel top">
+      <div class="avatar">^_^</div>
+      <div>
+        <h1>AI Home Control</h1>
+        <div id="modeBadge" class="badge mode-auto">Mode: auto</div>
+      </div>
+      <div class="spacer"></div>
+      <button id="toggleControlsBtn" class="ghost" onclick="toggleControls()">Show controls</button>
+    </div>
+
+    <div class="panel">
+      <div id="chatBox" class="chat-box">
+        <div class="msg msg-ai">
+          Ready. You can ask things like "turn off plug 2" or "what devices do you control?".
+          <div class="msg-meta">assistant</div>
+        </div>
+      </div>
+      <div id="submitStatus" class="hint"></div>
+      <div class="row">
+        <input id="cmd" placeholder="Try: turn off plug 2 or what devices do you control" />
+        <button id="sendBtn" class="primary" onclick="sendCommand()">Send</button>
+      </div>
+    </div>
+
+    <div id="controlsPanel" class="panel hidden">
+      <div class="section-title">Controls</div>
+
+      <div class="row" id="quick" style="margin-bottom:10px;"></div>
+
+      <div class="row" style="margin-bottom:10px;">
+        <label for="mode">Mode</label>
+        <select id="mode">
+          <option value="suggest">suggest</option>
+          <option value="ask">ask</option>
+          <option value="auto" selected>auto</option>
+        </select>
+        <button onclick="setMode()">Set Mode</button>
+      </div>
+
+      <div class="row" style="justify-content: space-between; margin-bottom:6px;">
+        <div style="font-weight:600;">New Device Suggestions</div>
+        <button class="ghost" onclick="clearSuggestions()">Clear</button>
+      </div>
+      <div id="suggestionList" class="hint" style="margin-bottom:10px;">No suggestions yet.</div>
+
+      <div style="font-weight:600; margin-bottom:6px;">Capabilities</div>
+      <div id="capabilities" class="hint" style="margin-bottom:10px;">Ask: what can xiaomi fan do?</div>
+
+      <details>
+        <summary>Debug raw result</summary>
+        <div id="lastStatus" class="mono">No result yet</div>
+      </details>
+    </div>
+  </div>
+
+  <div id="suggestionModalBackdrop" class="modal-backdrop" onclick="closeSuggestionModal(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <h3>Approve New Device</h3>
+      <div id="modalEntity" class="meta"></div>
+      <div class="row" style="margin-bottom:10px;">
+        <label for="aliasInput">Alias</label>
+        <input id="aliasInput" placeholder="living room fan" />
+      </div>
+      <div class="row" style="justify-content:flex-end;">
+        <button class="ghost" onclick="closeSuggestionModal()">Cancel</button>
+        <button class="reject" id="modalRejectBtn">Reject</button>
+        <button class="approve" id="modalApproveBtn">Approve</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+let isSending = false;
+let lockUntil = 0;
+let lastQueuedCommand = '';
+const suggestions = [];
+const seenSuggestionKeys = new Set();
+let modalSuggestion = null;
+let lastActionResult = null;
+const chatHistory = [];
+let lastRenderedSignature = "";
+let controlsVisible = false;
+
+function nowMs() {
+  return Date.now();
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function setSubmitStatus(text, level = "info") {
+  const el = document.getElementById("submitStatus");
+  if (!el) return;
+  el.textContent = text || "";
+  el.className = `hint ${level === "ok" ? "status-ok" : level === "warn" ? "status-warn" : level === "bad" ? "status-bad" : ""}`;
+}
+
+function pushChat(role, text, meta = "") {
+  if (!text) return;
+  chatHistory.push({ role, text: String(text), meta: String(meta || "") });
+  if (chatHistory.length > 80) {
+    chatHistory.splice(0, chatHistory.length - 80);
+  }
+  renderChat();
+}
+
+function renderChat() {
+  const box = document.getElementById("chatBox");
+  if (!box) return;
+  if (!chatHistory.length) {
+    box.innerHTML = '<div class="msg msg-ai">No chat yet.<div class="msg-meta">assistant</div></div>';
+    return;
+  }
+  box.innerHTML = chatHistory
+    .map((item) => {
+      const cls = item.role === "user" ? "msg msg-user" : "msg msg-ai";
+      const text = escapeHtml(item.text).replace(/\n/g, "<br/>");
+      const meta = escapeHtml(item.meta || (item.role === "user" ? "you" : "assistant"));
+      return `<div class="${cls}">${text}<div class="msg-meta">${meta}</div></div>`;
+    })
+    .join("");
+  box.scrollTop = box.scrollHeight;
+}
+
+function setControlsDisabled(disabled) {
+  const sendBtn = document.getElementById("sendBtn");
+  const cmd = document.getElementById("cmd");
+  if (sendBtn) sendBtn.disabled = disabled;
+  if (cmd) cmd.disabled = disabled;
+  document.querySelectorAll("#quick button, .approve, .reject").forEach((btn) => {
+    btn.disabled = disabled;
+  });
+}
+
+function enforceLock() {
+  const shouldLock = isSending || nowMs() < lockUntil;
+  setControlsDisabled(shouldLock);
+}
+
+function toggleControls() {
+  controlsVisible = !controlsVisible;
+  const panel = document.getElementById("controlsPanel");
+  const btn = document.getElementById("toggleControlsBtn");
+  if (!panel || !btn) return;
+  panel.classList.toggle("hidden", !controlsVisible);
+  btn.textContent = controlsVisible ? "Hide controls" : "Show controls";
+}
+
+const quick = document.getElementById("quick");
+for (let i = 1; i <= 4; i++) {
+  const on = document.createElement("button");
+  on.className = "quick";
+  on.textContent = `Plug ${i} ON`;
+  on.onclick = () => postCommand(`turn on plug ${i}`, true);
+  quick.appendChild(on);
+
+  const off = document.createElement("button");
+  off.className = "quick";
+  off.textContent = `Plug ${i} OFF`;
+  off.onclick = () => postCommand(`turn off plug ${i}`, true);
+  quick.appendChild(off);
+}
+
+const cmdInput = document.getElementById("cmd");
+cmdInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    sendCommand();
+  }
+});
+
+async function postCommand(command, confirm) {
+  if (!command || isSending || nowMs() < lockUntil) {
+    return false;
+  }
+
+  isSending = true;
+  enforceLock();
+  setSubmitStatus("Sending command...", "info");
+  try {
+    const res = await fetch("/ai-command", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ command, confirm: !!confirm, source: "node_red" })
+    });
+    const body = await res.json();
+    if (!body.ok) {
+      setSubmitStatus(`Rejected by API: ${body.error || "unknown error"}`, "bad");
+      return false;
+    }
+    lastQueuedCommand = command;
+    lockUntil = nowMs() + 2200;
+    setSubmitStatus(`Queued: ${command}`, "ok");
+    pushChat("user", command, "you");
+    return true;
+  } catch (err) {
+    setSubmitStatus(`Send failed: ${err}`, "bad");
+    return false;
+  } finally {
+    isSending = false;
+    enforceLock();
+  }
+}
+
+function sendCommand() {
+  const command = document.getElementById("cmd").value.trim();
+  if (!command) return;
+  postCommand(command, true).then((ok) => {
+    if (ok) {
+      document.getElementById("cmd").value = "";
+    }
+  });
+}
+
+async function setMode() {
+  const mode = document.getElementById("mode").value;
+  await fetch("/ai-mode", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ mode })
+  });
+  pushChat("assistant", `Mode set to ${mode}`, "assistant");
+}
+
+function clearSuggestions() {
+  suggestions.length = 0;
+  renderSuggestionList();
+}
+
+function addSuggestion(suggestion) {
+  const key = `${suggestion.entity_id}|${suggestion.time}`;
+  if (seenSuggestionKeys.has(key)) return;
+  seenSuggestionKeys.add(key);
+  suggestions.unshift(suggestion);
+  if (suggestions.length > 30) suggestions.length = 30;
+  renderSuggestionList();
+  pushChat(
+    "assistant",
+    `New device suggestion:\n${suggestion.entity_id || "unknown"}\nUse approve/reject in controls.`,
+    "assistant"
+  );
+  openSuggestionModal(suggestion);
+}
+
+function renderSuggestionList() {
+  const list = document.getElementById("suggestionList");
+  if (!list) return;
+  if (!suggestions.length) {
+    list.className = "hint";
+    list.textContent = "No suggestions yet.";
+    return;
+  }
+  list.className = "";
+  list.innerHTML = suggestions
+    .map(
+      (s, idx) => `
+    <div class="suggest-item">
+      <div class="suggest-title">${escapeHtml(s.suggested_alias || s.entity_id || "new device")}</div>
+      <div class="suggest-meta">${escapeHtml(s.entity_id || "")}</div>
+      <div class="row">
+        <button class="approve" onclick="openSuggestionModalByIndex(${idx})">Approve</button>
+        <button class="reject" onclick="quickRejectByIndex(${idx})">Reject</button>
+      </div>
+    </div>
+  `
+    )
+    .join("");
+  enforceLock();
+}
+
+function openSuggestionModalByIndex(index) {
+  const selected = suggestions[index];
+  if (!selected) return;
+  openSuggestionModal(selected);
+}
+
+function openSuggestionModal(suggestion) {
+  modalSuggestion = suggestion;
+  document.getElementById("modalEntity").textContent = suggestion.entity_id || "";
+  document.getElementById("aliasInput").value = suggestion.suggested_alias || "";
+
+  const approveBtn = document.getElementById("modalApproveBtn");
+  const rejectBtn = document.getElementById("modalRejectBtn");
+
+  approveBtn.onclick = async () => {
+    const alias = document.getElementById("aliasInput").value.trim();
+    const base = `approve device ${suggestion.entity_id}`;
+    const command = alias ? `${base} as ${alias}` : base;
+    const ok = await postCommand(command, true);
+    if (ok) closeSuggestionModal();
+  };
+
+  rejectBtn.onclick = async () => {
+    const command = `reject device ${suggestion.entity_id}`;
+    const ok = await postCommand(command, true);
+    if (ok) closeSuggestionModal();
+  };
+
+  document.getElementById("suggestionModalBackdrop").style.display = "flex";
+  enforceLock();
+}
+
+async function quickRejectByIndex(index) {
+  const s = suggestions[index];
+  if (!s) return;
+  await postCommand(`reject device ${s.entity_id}`, true);
+}
+
+function closeSuggestionModal(event) {
+  if (event && event.target && event.target.id !== "suggestionModalBackdrop") return;
+  modalSuggestion = null;
+  document.getElementById("suggestionModalBackdrop").style.display = "none";
+}
+
+function renderCapabilities(result) {
+  const capEl = document.getElementById("capabilities");
+  if (!capEl) return;
+  if (result && result.action === "capabilities" && Array.isArray(result.capabilities)) {
+    if (!result.capabilities.length) {
+      capEl.className = "hint";
+      capEl.textContent = "No capabilities found.";
+      return;
+    }
+    const lines = result.capabilities.map((row) => {
+      const target = row.target || row.entity_id || "device";
+      const actions = Array.isArray(row.supported_actions) ? row.supported_actions.join(", ") : "none";
+      const allowed = row.allowed === true ? "allowed" : "not allowed";
+      return `${target}: ${actions} (${allowed})`;
+    });
+    capEl.className = "mono";
+    capEl.textContent = lines.join("\n");
+    return;
+  }
+  capEl.className = "hint";
+  capEl.textContent = "Ask: what can xiaomi fan do? or what devices do you control?";
+}
+
+function formatTargetLabel(step, result) {
+  if (step && step.entity_alias) return step.entity_alias;
+  if (step && Number(step.outlet) > 0) return `plug ${step.outlet}`;
+  if (result && Number(result.outlet) > 0) return `plug ${result.outlet}`;
+  if (result && result.entity_id && result.entity_id !== "none") return result.entity_id;
+  return "device";
+}
+
+function formatActionFriendly(result) {
+  const action = String(result.action || "").toLowerCase();
+  const firstStep = Array.isArray(result.steps) && result.steps.length ? result.steps[0] : null;
+  const target = formatTargetLabel(firstStep, result);
+
+  if (action === "turn_on") return `Done. I turned on ${target}.`;
+  if (action === "turn_off") return `Done. I turned off ${target}.`;
+  if (action === "set_percentage") {
+    const pct = firstStep && Number(firstStep.percentage) > 0 ? Number(firstStep.percentage) : null;
+    return pct ? `Done. I set ${target} speed to ${pct}%.` : `Done. I updated ${target} speed.`;
+  }
+  if (action === "increase_speed") return `Done. I increased ${target} speed.`;
+  if (action === "decrease_speed") return `Done. I decreased ${target} speed.`;
+  if (action === "oscillate_on") return `Done. I turned on oscillation for ${target}.`;
+  if (action === "oscillate_off") return `Done. I turned off oscillation for ${target}.`;
+  if (action === "set_preset_mode") {
+    const preset = firstStep && firstStep.preset_mode ? String(firstStep.preset_mode) : "preset mode";
+    return `Done. I set ${target} to ${preset}.`;
+  }
+  if (action === "approve_device") return "Done. I approved that device for control.";
+  if (action === "reject_device") return "Done. I rejected that device suggestion.";
+  return "";
+}
+
+function summarizeResultForChat(result) {
+  if (!result || !result.status) return "";
+  const status = String(result.status || "").toLowerCase();
+
+  if (result.action === "capabilities" && Array.isArray(result.capabilities)) {
+    if (!result.capabilities.length) return "No capabilities found.";
+    const lines = result.capabilities.map((row) => {
+      const target = row.target || row.entity_id || "device";
+      const actions = Array.isArray(row.supported_actions) ? row.supported_actions.join(", ") : "none";
+      const allowed = row.allowed ? "allowed" : "not allowed";
+      return `- ${target}: ${actions}${allowed === "allowed" ? "" : " (not allowed)"}`;
+    });
+    return `Here is what I can control right now:\n${lines.join("\n")}`;
+  }
+
+  if (result.event === "device_suggestion") {
+    return `New device found: ${result.entity_id || "unknown"}\nSuggested alias: ${result.suggested_alias || "device"}`;
+  }
+
+  if (status === "executed") {
+    const friendly = formatActionFriendly(result);
+    if (friendly) return friendly;
+    return "Done.";
+  }
+
+  if (status === "rejected") {
+    const detail = String(result.detail || "").trim();
+    return detail ? `I could not do that: ${detail}` : "I could not do that.";
+  }
+
+  if (status === "failed") {
+    const detail = String(result.detail || "").trim();
+    return detail ? `That failed: ${detail}` : "That failed.";
+  }
+
+  return String(result.detail || "No result yet");
+}
+
+async function refreshState() {
+  let result = { status: "idle", detail: "No result yet" };
+  let modeData = { mode: "auto" };
+
+  try {
+    const resultRes = await fetch("/ai-result");
+    result = await resultRes.json();
+  } catch (err) {
+    result = { status: "failed", detail: `Failed to load result: ${err}` };
+  }
+
+  try {
+    const modeRes = await fetch("/ai-mode");
+    modeData = await modeRes.json();
+  } catch (err) {
+    modeData = { mode: "auto" };
+  }
+
+  const badge = document.getElementById("modeBadge");
+  if (badge) {
+    badge.textContent = `Mode: ${modeData.mode || "auto"}`;
+    badge.className = `badge mode-${modeData.mode || "auto"}`;
+  }
+
+  if (result && result.event === "device_suggestion" && result.entity_id) {
+    addSuggestion(result);
+  } else {
+    lastActionResult = result;
+  }
+
+  const displayResult = lastActionResult || result;
+
+  const statusEl = document.getElementById("lastStatus");
+  if (statusEl) {
+    statusEl.textContent = JSON.stringify(displayResult, null, 2);
+    if (displayResult && displayResult.status === "executed") statusEl.className = "mono status-ok";
+    else if (displayResult && displayResult.status === "failed") statusEl.className = "mono status-bad";
+    else if (displayResult && displayResult.status === "rejected") statusEl.className = "mono status-warn";
+    else statusEl.className = "mono";
+  }
+
+  renderCapabilities(displayResult || {});
+
+  const signature = JSON.stringify({
+    time: displayResult && displayResult.time,
+    command: displayResult && displayResult.command,
+    status: displayResult && displayResult.status,
+    action: displayResult && displayResult.action,
+    event: displayResult && displayResult.event
+  });
+
+  if (signature !== lastRenderedSignature && displayResult && displayResult.status) {
+    const chatText = summarizeResultForChat(displayResult);
+    if (chatText) {
+      pushChat("assistant", chatText, "assistant");
+    }
+    lastRenderedSignature = signature;
+  }
+
+  if (lastQueuedCommand && displayResult && displayResult.command === lastQueuedCommand) {
+    if (displayResult.status === "executed") setSubmitStatus(`Done: ${lastQueuedCommand}`, "ok");
+    else if (displayResult.status === "rejected") setSubmitStatus(`Rejected: ${displayResult.detail || lastQueuedCommand}`, "warn");
+    else if (displayResult.status === "failed") setSubmitStatus(`Failed: ${displayResult.detail || lastQueuedCommand}`, "bad");
+  }
+
+  enforceLock();
+}
+
+setInterval(refreshState, 2000);
+refreshState();
+</script>
+</body>
+</html>

@@ -116,6 +116,7 @@ The agent now supports guarded action execution for plugs 1..4:
 - publish command text to MQTT topic `home/ai/command`
 - agent parses command and executes HA `switch.turn_on`/`switch.turn_off`
 - result is published to `home/ai/action_result`
+- newly discovered controllable devices are suggested on `home/ai/device_suggestion`
 - audit rows are stored in Influx measurement `agent_action`
 - action mode topics:
   - current mode: `home/ai/mode`
@@ -140,20 +141,60 @@ Guardrails:
 - flip cooldown for rapid on/off (`ACTION_FLIP_COOLDOWN_SECONDS`, default 3s)
 - source tagging (`manual|node_red|voice|api`) in action audit rows
 
+Auto-discovery (safe):
+
+- agent watches HA MQTT state topics for new `switch|light|fan|input_boolean` entities
+- unknown entities are not auto-enabled for control
+- agent publishes a suggestion event with approval command example
+- approve/reject via command topic:
+  - `approve device fan.some_entity as living room fan`
+  - `reject device fan.some_entity`
+- approved aliases are persisted to `runtime/agent/dynamic_aliases.json`
+
 Node-RED control console:
 
 - import `nodered/flows/ai-control-console.json`
 - open `http://localhost:1880/ai-console`
+- new-device suggestions appear as a popup modal with `Approve` / `Reject` buttons
+- simplified chat-first layout with optional advanced controls
+- press `Enter` in the command input to send
 
 Multi-action command examples:
 
 - `turn on plug 3 and 4 and turn off plug 2`
 - `turn off plug 1, then turn on plug 2`
+- `what devices do you control`
+- `what can xiaomi fan do`
+
+Fan command examples (after fan alias approval):
+
+- `turn on xiaomi fan`
+- `turn off xiaomi fan`
+- `set xiaomi fan speed to 66`
+- `turn the fan up a bit`
+- `turn the fan down a bit`
+- `turn on xiaomi fan oscillation`
+- `turn off xiaomi fan oscillation`
+- `set xiaomi fan to sleeping mode`
+- `set xiaomi fan to direct breeze`
+
+Natural phrase behavior:
+
+- `turn the fan a bit` = oscillate briefly, then auto-stop (default 5s)
+- `turn the fan a bit for 10 seconds` = oscillate for 10s, then auto-stop
 
 Optional non-plug aliases:
 
 - set `ACTION_EXTRA_ENTITY_MAP_JSON` in `docker/.env`, for example
   `{"desk lamp":"light.desk_lamp","bedroom fan":"fan.bedroom_fan"}`
+
+Discovery noise filtering:
+
+- helper/config entities are ignored by default in new-device suggestions
+- default ignore covers patterns such as:
+  `physical_controls_locked`, `brightness`, `indicator`, `auto_off_enabled`, `auto_update_enabled`, `led`
+- configurable via:
+  `ACTION_DEVICE_DISCOVERY_IGNORE_OBJECTID_REGEX` in `docker/.env`
 
 Voice bridge (PC push-to-talk/typed fallback):
 

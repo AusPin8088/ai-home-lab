@@ -9,6 +9,10 @@ Import file:
 What it provides:
 
 - `GET /ai-console`: browser control page (text command, quick plug buttons, mode switch, live status)
+- Chat-style message thread (user + assistant bubbles based on command/result events)
+- In-console device suggestion UX: popup modal + list with `Approve` / `Reject` buttons (no manual typing required)
+- In-console capability panel (for queries like `what can xiaomi fan do`)
+- Press `Enter` in the command input to send immediately
 - `POST /ai-command`: enqueue AI command to `home/ai/command`
 - `GET /ai-result`: latest `home/ai/action_result`
 - `POST /ai-mode`: set mode via `home/ai/mode/set`

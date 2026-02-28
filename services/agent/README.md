@@ -36,6 +36,7 @@ Required environment variables:
 Result topic:
 
 - `home/ai/action_result`
+- `home/ai/device_suggestion`
 
 Mode topics:
 
@@ -49,6 +50,14 @@ Guardrails:
 - per-outlet flip cooldown (`ACTION_FLIP_COOLDOWN_SECONDS`, default `3`)
 - ask-mode confirmation required unless command contains `confirm` or JSON `confirm:true`
 - source tagging from payload (`manual|node_red|voice|api`)
+
+Device discovery + approval:
+
+- new `switch|light|fan|input_boolean` entities from HA MQTT are detected automatically
+- discovery is published to `home/ai/device_suggestion`
+- approve with `approve device <entity_id> as <alias>`
+- reject with `reject device <entity_id>`
+- dynamic aliases are persisted (default `/app/runtime/dynamic_aliases.json`)
 
 ## Packaging Note
 
