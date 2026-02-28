@@ -21,6 +21,7 @@ runtime/influxdb3/secrets/admin-token.json
 runtime/mosquitto/data/
 runtime/mosquitto/log/
 runtime/nodered/data/
+runtime/agent/
 backups/
 
 # Home Assistant runtime files
