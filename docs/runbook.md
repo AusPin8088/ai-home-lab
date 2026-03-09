@@ -200,13 +200,17 @@ LIMIT 300
 ## AI Action Bridge
 
 1. Set `HA_TOKEN` in `docker/.env` (Home Assistant long-lived token).
-2. Restart agent:
+2. Optional model routing in `docker/.env`:
+   - `OLLAMA_MODEL=llama3.1:8b`
+   - `ACTION_PARSE_OLLAMA_MODEL=` (optional override)
+   - `SUGGESTION_OLLAMA_MODEL=` (optional override)
+3. Restart agent:
 
 ```powershell
 .\scripts\dev.ps1 restart agent
 ```
 
-3. Publish command:
+4. Publish command:
 
 ```powershell
 docker exec mosquitto sh -lc "mosquitto_pub -h localhost -u '<MQTT_USER>' -P '<MQTT_PASSWORD>' -t home/ai/command -m 'turn off plug 2'"
@@ -219,7 +223,7 @@ docker exec mosquitto sh -lc "mosquitto_pub -h localhost -u '<MQTT_USER>' -P '<M
 docker exec mosquitto sh -lc "mosquitto_pub -h localhost -u '<MQTT_USER>' -P '<MQTT_PASSWORD>' -t home/ai/command -m 'set xiaomi fan to sleeping mode'"
 ```
 
-4. Read result:
+5. Read result:
 
 ```powershell
 docker exec mosquitto sh -lc "mosquitto_sub -h localhost -u '<MQTT_USER>' -P '<MQTT_PASSWORD>' -t home/ai/action_result -C 1 -v"
@@ -271,7 +275,7 @@ Fan command examples:
 - `set xiaomi fan speed low|medium|high`
 - `increase xiaomi fan speed`
 - `decrease xiaomi fan speed`
-- `can you turn the fan a bit` (natural phrase -> increase speed)
+- `can you turn the fan a bit` (natural phrase -> brief oscillation pulse, default 5s)
 - `turn the fan down a bit` (natural phrase -> decrease speed)
 - `turn on xiaomi fan oscillation`
 - `turn off xiaomi fan oscillation`
@@ -303,6 +307,28 @@ Dynamic aliases are persisted at:
 
 ## Voice Command (PC)
 
+Install voice dependencies once:
+
+```powershell
+python -m venv .venv-voice
+.\.venv-voice\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r .\scripts\requirements-voice.txt
+```
+
+Note: use Python 3.12+ for voice dependencies.
+
+Voice config keys (`docker/.env`, optional; defaults are applied if missing):
+
+- `VOICE_STT_ENGINE=whisper`
+- `VOICE_WHISPER_MODEL=small`
+- `VOICE_WHISPER_DEVICE=cpu`
+- `VOICE_WHISPER_COMPUTE_TYPE=int8`
+- `VOICE_LANGUAGES=en,ms,zh`
+- `VOICE_TTS_ENABLED=true`
+- `VOICE_PUSH_TO_TALK_TIMEOUT_SECONDS=5`
+- `VOICE_RESULT_TIMEOUT_SECONDS=20`
+
 Run:
 
 ```powershell
@@ -311,9 +337,29 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\voice-bridge.ps1
 
 Behavior:
 
-- Press Enter to use microphone dictation (if available), or type command directly.
+- Press Enter on empty prompt for push-to-talk.
+- Uses local Whisper STT first (`scripts/voice-stt.py`), then Windows speech fallback.
 - Publishes commands to `home/ai/command` with source `voice`.
-- Reads one response from `home/ai/action_result`.
+- Payload includes `raw_command` and `lang` (`en|ms|zh`) metadata.
+- In `ask` mode, `confirm=true` is sent only for explicit confirmation speech/text.
+- Reads one response from `home/ai/action_result` and prints concise status line.
+- Speaks concise response with TTS unless `-NoTts` or `VOICE_TTS_ENABLED=false`.
+
+Optional flags:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\voice-bridge.ps1 -VerboseOutput
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\voice-bridge.ps1 -NoTts
+```
+
+Troubleshooting matrix:
+
+| Symptom | Likely cause | Action |
+| --- | --- | --- |
+| `audio capture failed` | Mic device unavailable/blocked | Check Windows mic permission and default input device |
+| `failed to load whisper model` | `faster-whisper` not installed or model download issue | `python -m pip install -r .\scripts\requirements-voice.txt` then retry |
+| High command latency | First model load/cold start | Keep script running; use smaller model if needed |
+| `No action_result received within timeout` | MQTT/agent path delay or service issue | Run `.\scripts\dev.ps1 health`, then inspect `docker logs --tail 40 homelab-agent` |
 
 ## Image Pins
 

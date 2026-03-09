@@ -34,21 +34,34 @@ Features:
 - capability query panel (example: `what can xiaomi fan do`)
 - simple avatar/status bubble
 - `Enter` key submits command from the text box
+- command parsing/suggestion model is configurable via `OLLAMA_MODEL` (or split parse/suggestion vars)
 
 ## 3) PC Voice Bridge
 
 Run:
 
 ```powershell
+python -m venv .venv-voice
+.\.venv-voice\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r .\scripts\requirements-voice.txt
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\voice-bridge.ps1
 ```
 
+Use Python 3.12+ for voice dependencies.
+
 Behavior:
 
-- microphone dictation when available (press Enter)
+- push-to-talk voice capture when pressing Enter on empty input
+- local Whisper STT as primary (`VOICE_STT_ENGINE=whisper`)
+- fallback to Windows speech recognizer if Whisper backend is unavailable
+- deterministic normalization for EN/MS/ZH high-frequency home-control phrases
 - typed fallback
 - publishes with source `voice`
-- reads result topic and optional TTS reply
+- publishes metadata `raw_command` and `lang` in command JSON
+- reads result topic and provides concise text + optional TTS reply
+- result wait timeout is configurable via `VOICE_RESULT_TIMEOUT_SECONDS` (default 20s)
+- no wake-word/always-listening in this phase (push-to-talk only)
 
 ## 4) Autonomy Modes
 
@@ -102,3 +115,11 @@ Run:
 Dashboard:
 
 - Grafana -> `AI Action Guardrails`
+
+Voice acceptance checklist:
+
+- EN command executes (`turn off plug 2`)
+- MS equivalent command executes after normalization
+- ZH equivalent command executes after normalization
+- ask mode without explicit confirm is rejected
+- ask mode with explicit confirm executes

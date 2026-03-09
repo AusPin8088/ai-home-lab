@@ -678,6 +678,7 @@ def _extract_json_object(text: str) -> dict[str, Any] | None:
 
 def parse_ollama_action_plan(
     ollama_url: str,
+    model: str,
     timeout: int,
     text: str,
     extra_entity_alias_map: dict[str, str] | None = None,
@@ -692,7 +693,7 @@ def parse_ollama_action_plan(
         )
 
     payload = {
-        "model": "llama3.1:8b",
+        "model": model,
         "prompt": (
             "Convert this home automation command into JSON only. "
             "Return exactly one object with keys: steps, reason. "
@@ -777,11 +778,13 @@ def parse_ollama_action_plan(
 
 def parse_ollama_action_command(
     ollama_url: str,
+    model: str,
     timeout: int,
     text: str,
 ) -> tuple[str | None, int | None, str]:
     steps, detail = parse_ollama_action_plan(
         ollama_url=ollama_url,
+        model=model,
         timeout=timeout,
         text=text,
         extra_entity_alias_map={},
@@ -912,9 +915,9 @@ def execute_home_assistant_action(
     return call_service(service_domain, service, body)
 
 
-def ollama_suggest(ollama_url: str, timeout: int, text: str) -> str:
+def ollama_suggest(ollama_url: str, model: str, timeout: int, text: str) -> str:
     payload = {
-        "model": "llama3.1:8b",
+        "model": model,
         "prompt": (
             "You are a cautious home automation analyst. "
             "Given the event/log below, propose ONE safe automation suggestion. "
@@ -943,6 +946,15 @@ def main() -> None:
     mqtt_keepalive = int(os.getenv("MQTT_KEEPALIVE", "120"))
 
     ollama_url = os.getenv("OLLAMA_URL", "http://ollama:11434")
+    ollama_default_model = os.getenv("OLLAMA_MODEL", "llama3.1:8b")
+    action_parse_ollama_model = os.getenv(
+        "ACTION_PARSE_OLLAMA_MODEL",
+        ollama_default_model,
+    )
+    suggestion_ollama_model = os.getenv(
+        "SUGGESTION_OLLAMA_MODEL",
+        ollama_default_model,
+    )
     influx_url = os.getenv("INFLUX_URL", "http://influxdb:8181")
     influx_token = os.getenv("INFLUX_TOKEN", "")
     influx_org = os.getenv("INFLUX_ORG", "homelab")
@@ -1022,6 +1034,11 @@ def main() -> None:
             "ACTION_BRIDGE_ENABLED=true but HA_TOKEN is empty; action bridge will reject commands",
             flush=True,
         )
+    print(
+        "Ollama models:",
+        f"parse={action_parse_ollama_model}, suggestion={suggestion_ollama_model}",
+        flush=True,
+    )
 
     def write_action_audit(
         *,
@@ -1235,6 +1252,7 @@ def main() -> None:
             try:
                 suggestion = ollama_suggest(
                     ollama_url=ollama_url,
+                    model=suggestion_ollama_model,
                     timeout=suggestion_http_timeout,
                     text=f"topic={topic} payload={payload}",
                 )
@@ -1495,6 +1513,7 @@ def main() -> None:
                     if not planned_steps and action_parse_with_ollama:
                         parsed_steps, parsed_detail = parse_ollama_action_plan(
                             ollama_url=ollama_url,
+                            model=action_parse_ollama_model,
                             timeout=action_parse_timeout,
                             text=command_text,
                             extra_entity_alias_map=current_alias_map,

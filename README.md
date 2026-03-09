@@ -27,6 +27,8 @@ Docker-based local automation stack:
 - `scripts/smoke.ps1`: end-to-end smoke test
 - `scripts/ai-smoke.ps1`: AI action guardrail smoke test
 - `scripts/voice-bridge.ps1`: PC voice/typed command bridge
+- `scripts/voice-stt.py`: local Whisper STT helper
+- `scripts/requirements-voice.txt`: Python dependencies for voice STT
 - `docs/architecture.md`: system architecture and runtime layout
 - `docs/runbook.md`: operations and troubleshooting
 - `docs/backup-restore.md`: backup and restore workflow
@@ -125,6 +127,13 @@ The agent now supports guarded action execution for plugs 1..4:
 Required in `docker/.env`:
 
 - `HA_TOKEN=<home-assistant-long-lived-token>`
+- `OLLAMA_MODEL=<model-name>` (default `llama3.1:8b`)
+
+Optional model split:
+
+- `ACTION_PARSE_OLLAMA_MODEL=<model-name>` (command/action parsing)
+- `SUGGESTION_OLLAMA_MODEL=<model-name>` (event suggestions)
+- if unset, both use `OLLAMA_MODEL`
 
 Action modes:
 
@@ -198,8 +207,56 @@ Discovery noise filtering:
 
 Voice bridge (PC push-to-talk/typed fallback):
 
+Use Python 3.12+ (3.14 is supported with the current requirements).
+
+Install once on host Python:
+
+```powershell
+python -m venv .venv-voice
+.\.venv-voice\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r .\scripts\requirements-voice.txt
+```
+
+Run:
+
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\voice-bridge.ps1
+```
+
+Optional flags:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\voice-bridge.ps1 -VerboseOutput
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\voice-bridge.ps1 -NoTts
+```
+
+Voice behavior (Phase 4):
+
+- push-to-talk starts when you press Enter on empty input
+- Whisper STT is primary; Windows speech is fallback if Whisper/Python unavailable
+- language scope: English + Malay + Chinese
+- typed input is always available
+- command payload includes `raw_command` and `lang` metadata with `source=voice`
+- concise result summary is shown and optionally spoken (TTS)
+
+Recommended model upgrade (multilingual):
+
+```powershell
+docker exec -it ollama ollama pull qwen2.5:7b-instruct
+```
+
+Then set in `docker/.env`:
+
+```env
+OLLAMA_MODEL=qwen2.5:7b-instruct
+VOICE_WHISPER_MODEL=large-v3-turbo
+```
+
+Apply:
+
+```powershell
+.\scripts\dev.ps1 restart agent
 ```
 
 ## Grafana Datasource
